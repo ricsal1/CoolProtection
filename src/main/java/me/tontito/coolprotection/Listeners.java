@@ -1,6 +1,5 @@
 package me.tontito.coolprotection;
 
-import net.kyori.adventure.text.Component;
 import org.apache.commons.lang.StringUtils;
 import org.bukkit.*;
 import org.bukkit.block.Block;
@@ -229,17 +228,13 @@ public class Listeners implements Listener {
         if (country.contains("Russia") || country.contains("Belarus")) {
             player.sendTitle(ChatColor.RED + "Hello dear fellow from Russia", ChatColor.AQUA + "This is an alert to give news about the world.", 20 * 5, 20 * 10, 20 * 3);
 
-            main.getServer().getScheduler().scheduleSyncDelayedTask(
-                    main, () -> {
-                        player.sendTitle(ChatColor.RED + "Putin continues with terror", ChatColor.AQUA + "Kiev attacked while been visited by United Nations secretary!", 20 * 5, 20 * 10, 20 * 3);
-                    }, 400
-            );
+            main.getServer().getScheduler().scheduleSyncDelayedTask(main, () -> {
+                player.sendTitle(ChatColor.RED + "Putin continues with terror", ChatColor.AQUA + "Kiev attacked while been visited by United Nations secretary!", 20 * 5, 20 * 10, 20 * 3);
+            }, 400);
 
-            main.getServer().getScheduler().scheduleSyncDelayedTask(
-                    main, () -> {
-                        player.sendTitle(ChatColor.RED + "Nuclear power plants threaten", ChatColor.AQUA + "Thousands of war crimes committed on people!", 20 * 5, 20 * 10, 20 * 3);
-                    }, 800
-            );
+            main.getServer().getScheduler().scheduleSyncDelayedTask(main, () -> {
+                player.sendTitle(ChatColor.RED + "Nuclear power plants threaten", ChatColor.AQUA + "Thousands of war crimes committed on people!", 20 * 5, 20 * 10, 20 * 3);
+            }, 800);
         }
     }
 
@@ -384,7 +379,18 @@ public class Listeners implements Listener {
                 return;
             }
 
-            int nearbyEntities = world.getNearbyLivingEntities(location, 30, 200).size();
+            int nearbyEntities = 0;
+
+            if (main.serverVersion == 2 || main.serverVersion == 3) {
+
+                for (Object entity : world.getNearbyEntities(location, 30, 200, 30)) {
+                    if (entity instanceof LivingEntity) {
+                            nearbyEntities++;
+                    }
+                }
+            } else {
+                nearbyEntities = world.getNearbyLivingEntities(location, 30, 200).size();
+            }
 
             if (nearbyEntities > (main.totalMaxChunkEntities * 2)) {
                 event.setCancelled(true);
@@ -594,8 +600,7 @@ public class Listeners implements Listener {
             if (entities.getType().equals(EntityType.FIREWORK)) {
                 counter++;
 
-                if (counter > 15)
-                    entities.remove();
+                if (counter > 15) entities.remove();
             }
         }
 
@@ -686,8 +691,7 @@ public class Listeners implements Listener {
                     p.kick++;
 
                     if (p.kick == 2) {
-                        Component component = Component.text(ChatColor.YELLOW + "You are been warned " + player.getName() + " don't hack!");
-                        player.kick(component);
+                        player.kickPlayer("You are been warned " + player.getName() + " don't hack!");
                     }
 
                     if (p.kick == 4) {

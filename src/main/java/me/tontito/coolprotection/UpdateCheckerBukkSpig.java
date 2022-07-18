@@ -1,8 +1,5 @@
 package me.tontito.coolprotection;
 
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.TextComponent;
-import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
 import org.bukkit.scheduler.BukkitRunnable;
 
@@ -11,16 +8,18 @@ import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
-public class UpdateChecker extends BukkitRunnable {
+public class UpdateCheckerBukkSpig extends BukkitRunnable {
 
     private final Main main;
     private final String project;
     private final String projectName;
 
-    public UpdateChecker(Main main) {
+    public UpdateCheckerBukkSpig(Main main) {
         this.main = main;
         projectName = main.getDescription().getName();
         this.project = main.getDescription().getName().toLowerCase();
+
+        Bukkit.getLogger().info(main.serverVersion + "  versao ");
 
         runTaskLaterAsynchronously(main, 20);
     }
@@ -41,11 +40,6 @@ public class UpdateChecker extends BukkitRunnable {
             }
         } catch (Exception e) {
             Bukkit.getLogger().info("[" + projectName + "] Connection exception: " + e.getMessage());
-
-            Bukkit.getConsoleSender().sendMessage(net.kyori.adventure.text.Component
-                    .text("[" + projectName + "] Connection exception: " + e.getMessage())
-                    .color(net.kyori.adventure.text.format.NamedTextColor.RED)
-            );
         }
     }
 
@@ -66,17 +60,9 @@ public class UpdateChecker extends BukkitRunnable {
 
 
     private void promptUpdate(String serverVersion, String Url) {
-        TextComponent component;
 
         if (serverVersion == null) {
-            component = Component.text(" Unknown error checking version");
-
-            Bukkit.getConsoleSender().sendMessage(Component
-                    .text("[" + projectName + "]")
-                    .color(NamedTextColor.RED)
-                    .append(component)
-            );
-
+            Bukkit.getLogger().info(" Unknown error checking version");
             return;
         }
 
@@ -87,24 +73,19 @@ public class UpdateChecker extends BukkitRunnable {
 
         String currentVersion = main.getDescription().getVersion();
         int versionStatus = checkGreater(serverVersion, currentVersion);
-        NamedTextColor color = NamedTextColor.GRAY;
 
         if (versionStatus == -1) {
-            component = Component.text(" THERE IS A NEW UPDATE AVAILABLE Version: " + serverVersion +
-                    " Download it from here: https://dev.bukkit.org" + Url, NamedTextColor.GREEN);
+            Bukkit.getLogger().info(" THERE IS A NEW UPDATE AVAILABLE Version: " + serverVersion +
+                    " Download it from here: https://dev.bukkit.org" + Url);
+
         } else if (versionStatus == 0) {
-            component = Component.text(" You have the latest released version", NamedTextColor.GREEN);
+            Bukkit.getLogger().info(" You have the latest released version");
         } else if (versionStatus == 1) {
-            component = Component.text(" Congrats, you are testing a new version!", NamedTextColor.YELLOW);
+            Bukkit.getLogger().info(" Congrats, you are testing a new version!");
         } else {
-            component = Component.text(" Unknown error checking version (" + versionStatus + ")" + serverVersion + "   " + currentVersion, NamedTextColor.RED);
+            Bukkit.getLogger().info(" Unknown error checking version (" + versionStatus + ")" + serverVersion + "   " + currentVersion);
         }
 
-        Bukkit.getConsoleSender().sendMessage(Component
-                .text("[" + projectName + "]")
-                .color(color)
-                .append(component)
-        );
     }
 
 

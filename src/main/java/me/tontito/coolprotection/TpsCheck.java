@@ -2,10 +2,7 @@ package me.tontito.coolprotection;
 
 import com.destroystokyo.paper.event.server.ServerTickEndEvent;
 import org.bukkit.*;
-import org.bukkit.entity.Entity;
-import org.bukkit.entity.EntityType;
-import org.bukkit.entity.Item;
-import org.bukkit.entity.Player;
+import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.scoreboard.DisplaySlot;
@@ -136,7 +133,7 @@ public class TpsCheck implements Listener {
         World world = player.getWorld();
         int currentLiving = world.getLivingEntities().size();
         int currentEntities = world.getEntities().size();
-        int currentChunkEntities = player.getChunk().getEntities().length;
+        int currentChunkEntities = player.getLocation().getChunk().getEntities().length;
 
         if (mytps >= 18) {
             main.tpsLevel = 0;
@@ -417,8 +414,8 @@ public class TpsCheck implements Listener {
 
         int currentLiving = player.getWorld().getLivingEntities().size();
         int currentEntities = player.getWorld().getEntities().size();
-        int currentChunkEntities = player.getChunk().getEntities().length;
-        int currentChunkTileEntities = player.getChunk().getTileEntities().length;
+        int currentChunkEntities = player.getLocation().getChunk().getEntities().length;
+        int currentChunkTileEntities = player.getLocation().getChunk().getTileEntities().length;
 
         Team Maps = board.getTeam("Lagmeter");
 
@@ -429,8 +426,20 @@ public class TpsCheck implements Listener {
 
         Maps.setSuffix(ChatColor.GREEN + "Last: " + lastTPS() + "  CurAvg: " + Math.round(average1) + "  PrevAvg: " + Math.round(average2));
 
-        int nearbyLivingEntities = player.getWorld().getNearbyLivingEntities(player.getLocation(), 30, 200).size();
-        int nearbyEntities = player.getWorld().getNearbyEntities(player.getLocation(), 30, 200,30).size();
+        int nearbyLivingEntities = 0;
+        int nearbyEntities = 0;
+
+        if (main.serverVersion == 2 || main.serverVersion == 3) {
+            for (Object entity : player.getWorld().getNearbyEntities(player.getLocation(), 30, 200, 30)) {
+                if (entity instanceof LivingEntity) {
+                    nearbyLivingEntities++;
+                }
+                nearbyEntities++;
+            }
+        } else {
+            nearbyLivingEntities = player.getWorld().getNearbyLivingEntities(player.getLocation(), 30, 200).size();
+            nearbyEntities = player.getWorld().getNearbyEntities(player.getLocation(), 30, 200,30).size();
+        }
 
         Maps = board.getTeam("Lagmeter1");
         Maps.setSuffix(ChatColor.GREEN + "NBL: " + nearbyLivingEntities + "  NBE: " + nearbyEntities  + "  Chk: " + currentChunkEntities + "  CHKTile: " + currentChunkTileEntities);

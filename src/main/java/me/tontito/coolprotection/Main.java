@@ -61,7 +61,12 @@ public class Main extends JavaPlugin {
             return;
         }
 
-        new UpdateChecker(this);
+        if (serverVersion == 2 || serverVersion == 3) {
+            new UpdateCheckerBukkSpig(this);
+        } else {
+            new UpdateChecker(this);
+        }
+
         Utils.SetMain(this);
         setupConfig();
 
