@@ -1,0 +1,4 @@
+name: CoolProtection
+version: '${project.version}'
+main: me.tontito.CoolProtection.Main
+api-version: 1.18
