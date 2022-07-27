@@ -16,6 +16,7 @@ import org.bukkit.event.player.*;
 import org.bukkit.event.server.ServerListPingEvent;
 import org.bukkit.event.weather.LightningStrikeEvent;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
@@ -382,10 +383,9 @@ public class Listeners implements Listener {
             int nearbyEntities = 0;
 
             if (main.serverVersion == 2 || main.serverVersion == 3) {
-
                 for (Object entity : world.getNearbyEntities(location, 30, 200, 30)) {
                     if (entity instanceof LivingEntity) {
-                            nearbyEntities++;
+                        nearbyEntities++;
                     }
                 }
             } else {
@@ -398,16 +398,22 @@ public class Listeners implements Listener {
                 return;
             }
 
-            int currentChunkEntities = listagem.length;
+            int currentChunkLivingEntities = 0;
+
+            for (Object entity : listagem) {
+                if (entity instanceof LivingEntity) {
+                    currentChunkLivingEntities++;
+                }
+            }
 
             if (mundo == World.Environment.THE_END) {
-                if (currentChunkEntities > main.maxChunkEntities - 20) { //lower @end
+                if (currentChunkLivingEntities > main.maxChunkEntities - 20) { //lower @end
                     event.setCancelled(true);
                     main.alert = "maxChunk (SpawnMob) " + entidade;
                     return;
                 }
             } else {
-                if (currentChunkEntities > main.maxChunkEntities + 5) {
+                if (currentChunkLivingEntities > main.maxChunkEntities + 5) {
                     event.setCancelled(true);
                     main.alert = "maxChunk (SpawnMob) " + entidade;
                     return;
@@ -498,7 +504,7 @@ public class Listeners implements Listener {
 
             if (nearbyEntities > (main.totalMaxChunkEntities * 3)) {
                 event.setCancelled(true);
-                main.alert = "Near " + location.getBlockX() + "::" + location.getBlockZ() + " count " + nearbyEntities + " (SpawnEntity)  blocking during 1 sec";
+                main.alert = "Near " + location.getBlockX() + "::" + location.getBlockZ() + " count " + nearbyEntities + " (SpawnEntity) blocking during 1 sec";
                 Utils.logToFile("Protection Manager", main.alert);
                 main.tpsLevel = 3; //to avoid multiple blocks and writes @log
                 return;
@@ -533,7 +539,6 @@ public class Listeners implements Listener {
 
         Location location = event.getBlock().getLocation();
         World world = location.getWorld();
-        World.Environment mundo = world.getEnvironment();
         Entity[] listagem = location.getChunk().getEntities();
 
         if (main.totalMaxChunkEntities > 0) {
@@ -556,20 +561,11 @@ public class Listeners implements Listener {
 
             int currentChunkEntities = listagem.length;
 
-            if (mundo == World.Environment.THE_END) {
-                if (currentChunkEntities > main.maxChunkEntities - 20) { //lower @end
-                    event.setCancelled(true);
-                    main.alert = "maxChunk (PlaceEntity) " + entidade;
-                    Utils.logToFile("Protection Manager", main.alert);
-                    return;
-                }
-            } else {
-                if (currentChunkEntities > main.maxChunkEntities + 5) {
-                    event.setCancelled(true);
-                    main.alert = "maxChunk (PlaceEntity) " + entidade;
-                    Utils.logToFile("Protection Manager", main.alert);
-                    return;
-                }
+            if (currentChunkEntities > main.maxChunkEntities + 5) {
+                event.setCancelled(true);
+                main.alert = "maxChunk (PlaceEntity) " + entidade;
+                Utils.logToFile("Protection Manager", main.alert);
+                return;
             }
 
             if (mytps < 18) {
@@ -637,7 +633,7 @@ public class Listeners implements Listener {
             Block block2 = player.getLocation().getBlock();
             PlayerStatus p = (PlayerStatus) main.playerControl.get(player);
 
-            if (!player.isSneaking() && !player.isFlying() && !player.isGliding() && !(player.getVehicle() instanceof Horse) && block.getType().equals(Material.AIR)) { //jumping
+            if (!player.isSneaking() && !player.isFlying() && !player.isGliding() && !(player.getVehicle() instanceof Horse) && block.getType().equals(Material.AIR) && !player.hasPotionEffect(PotionEffectType.LEVITATION)) { //jumping
 
                 if (p.hight == 0) p.hight = currentHeight;
 
@@ -677,7 +673,7 @@ public class Listeners implements Listener {
                         }
                     }
 
-                    Utils.logToFile("Protection Manager", player.getName() + "   " + heightDiff + "    counter " + p.counter + "    " + (p.hight - currentHeight) + "    " + block2);
+                    Utils.logToFile("Protection Manager", player.getName() + "   " + heightDiff + "    counter " + p.counter + "    " + (p.hight - currentHeight) + "    " + block2 + "   " + player.hasPotionEffect(PotionEffectType.LEVITATION));
 
                     double currentVecX = player.getVelocity().getX();
                     double currentVecZ = player.getVelocity().getZ();

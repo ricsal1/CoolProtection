@@ -17,8 +17,8 @@ public class Main extends JavaPlugin {
     private TpsCheck tps;
     private Listeners listen;
 
-    protected int totalMaxChunkEntities = 23;
-    protected int maxChunkEntities = 23;
+    protected int totalMaxChunkEntities = 70;
+    protected int maxChunkEntities = 35;
     protected int maxEntities = 1600;
     protected int maxLiving = 800;
     protected String alert = "";
@@ -98,7 +98,7 @@ public class Main extends JavaPlugin {
                 dataFolder.mkdir();
             }
 
-            config.options().header("==== CoolProtection Configs ==== #");
+            config.options().header("==== CoolProtection Configs ====");
             config.addDefault("ExplodeProtection", true);
             config.addDefault("WitherProtection", true);
             config.addDefault("WitherLevel", 35);
@@ -109,7 +109,7 @@ public class Main extends JavaPlugin {
             config.addDefault("autoShutdownTime", 0);
             config.addDefault("autoShutDownCounterTime", 15);
             config.addDefault("maxTravelSpeed", 1.2);
-            config.addDefault("maxChunkEntities", 30);
+            config.addDefault("maxChunkEntities", 70);
             config.addDefault("ExplosionLevel", -20);
         }
 
@@ -156,7 +156,7 @@ public class Main extends JavaPlugin {
             autoShutdown = false;
             autoShutDownCounterTime = 10;
             autoShutDownTime = 0;
-            totalMaxChunkEntities = 30;
+            totalMaxChunkEntities = 70;
             maxSpeed = (float) 1.2;
         }
 
