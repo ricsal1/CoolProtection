@@ -20,12 +20,12 @@ import org.bukkit.potion.PotionEffectType;
 import org.bukkit.util.Vector;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.Map;
 
 import static org.bukkit.Bukkit.getServer;
 import static org.bukkit.entity.SpawnCategory.MONSTER;
-import static org.bukkit.event.player.PlayerResourcePackStatusEvent.Status.SUCCESSFULLY_LOADED;
+
 
 public class Listeners implements Listener {
 
@@ -34,7 +34,6 @@ public class Listeners implements Listener {
     private boolean AntigriefProtection = false;
     private TpsCheck tps;
     private Main main;
-    private final Hashtable playerCountry = new Hashtable();
 
 
     public Listeners(Main main, TpsCheck tps) {
@@ -155,16 +154,22 @@ public class Listeners implements Listener {
     }
 
 
-    @EventHandler
-    public void onPlayerResourcePackStatusEvent(@NotNull PlayerResourcePackStatusEvent event) {
-        if (event.getStatus().equals(SUCCESSFULLY_LOADED)) {
+    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
+    public void onChatReportPrevent(AsyncPlayerChatEvent e) {
 
-            Player player = event.getPlayer();
-            String country = (String) playerCountry.get(player.getName());
+        if (!main.antiChatReport) {
+            return;
+        }
 
-            if (main.DEFAULT_RESOURCE_HASH.equals("8DF285F52CBC6CE770D42B31DAE4535AECB6BE5C") && country.contains("Russia")) {
-                player.playSound(player.getLocation(), Sound.MUSIC_DISC_OTHERSIDE, SoundCategory.AMBIENT, 5.0F, 1.0F);
-            }
+        e.setCancelled(true);
+        Player player = e.getPlayer();
+        String message = "<" + player.getName() +"> "+ e.getMessage();
+
+        Iterator var8 = Bukkit.getOnlinePlayers().iterator();
+
+        while (var8.hasNext()) {
+            Player onlinePlayer = (Player) var8.next();
+            onlinePlayer.sendMessage(message);
         }
     }
 
@@ -173,21 +178,6 @@ public class Listeners implements Listener {
     public void onPlayerJoinEvent(@NotNull PlayerJoinEvent event) {
 
         Player player = event.getPlayer();
-        String country = "";
-
-        try {
-            country = Utils.getCountry(player.getAddress().getHostString());
-
-            if (country == null) country = "";
-        } catch (Exception e) {
-            country = "";
-        }
-
-        Utils.logToFile("Protection Manager", player.getName() + " joined " + country);
-
-        if (playerCountry.get(player.getName()) == null) {
-            playerCountry.put(player.getName(), country);
-        }
 
         if (main.playerControl.get(player) == null) {
             PlayerStatus p = new PlayerStatus();
@@ -226,17 +216,6 @@ public class Listeners implements Listener {
             }
         }
 
-        if (country.contains("Russia") || country.contains("Belarus")) {
-            player.sendTitle(ChatColor.RED + "Hello dear fellow from Russia", ChatColor.AQUA + "This is an alert to give news about the world.", 20 * 5, 20 * 10, 20 * 3);
-
-            main.getServer().getScheduler().scheduleSyncDelayedTask(main, () -> {
-                player.sendTitle(ChatColor.RED + "Putin continues with terror", ChatColor.AQUA + "Kiev attacked while been visited by United Nations secretary!", 20 * 5, 20 * 10, 20 * 3);
-            }, 400);
-
-            main.getServer().getScheduler().scheduleSyncDelayedTask(main, () -> {
-                player.sendTitle(ChatColor.RED + "Nuclear power plants threaten", ChatColor.AQUA + "Thousands of war crimes committed on people!", 20 * 5, 20 * 10, 20 * 3);
-            }, 800);
-        }
     }
 
 
@@ -624,6 +603,11 @@ public class Listeners implements Listener {
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onPlayerMoveEvent(@NotNull PlayerMoveEvent event) {
         Player player = event.getPlayer();
+
+        if (!player.getGameMode().equals(GameMode.SURVIVAL)) {
+            return;
+        }
+
         double distance = event.getFrom().distance(event.getTo());
         double currentHeight = event.getTo().getY();
         double heightDiff = event.getFrom().getY() - currentHeight;
@@ -634,6 +618,16 @@ public class Listeners implements Listener {
             PlayerStatus p = (PlayerStatus) main.playerControl.get(player);
 
             if (!player.isSneaking() && !player.isFlying() && !player.isGliding() && !(player.getVehicle() instanceof Horse) && block.getType().equals(Material.AIR) && !player.hasPotionEffect(PotionEffectType.LEVITATION)) { //jumping
+
+                ItemStack it = player.getInventory().getItemInMainHand();
+                if (it.getType() == Material.TRIDENT && it.containsEnchantment(Enchantment.RIPTIDE)) {
+                    return;
+                }
+
+                ItemStack it2 = player.getInventory().getItemInOffHand();
+                if (it2.getType() == Material.TRIDENT && it2.containsEnchantment(Enchantment.RIPTIDE)) {
+                    return;
+                }
 
                 if (p.hight == 0) p.hight = currentHeight;
 
@@ -673,6 +667,7 @@ public class Listeners implements Listener {
                         }
                     }
 
+                    Utils.logToFile("Protection Manager", player.getName() + "   " + it + "     " + it2 + "    " + it.containsEnchantment(Enchantment.RIPTIDE) + "    " + it2.containsEnchantment(Enchantment.RIPTIDE));
                     Utils.logToFile("Protection Manager", player.getName() + "   " + heightDiff + "    counter " + p.counter + "    " + (p.hight - currentHeight) + "    " + block2 + "   " + player.hasPotionEffect(PotionEffectType.LEVITATION));
 
                     double currentVecX = player.getVelocity().getX();
@@ -734,11 +729,11 @@ public class Listeners implements Listener {
                     player.setVelocity(player.getVelocity().multiply(0.98));
                     return;
                 }
-            } else if (player.isFlying() && !player.isOp() && distance > 0.1 && player.getGameMode().equals(GameMode.SURVIVAL)) {
+            } else if (player.isFlying() && distance > 0.1) {
                 player.setVelocity(player.getVelocity().multiply(0.5));
                 return;
 
-            } else if (distance > main.maxSpeed) {
+            } else if (distance > main.maxSpeed && player.getActivePotionEffects().size() == 0) {
                 if (Math.abs(heightDiff) > 0.6) return;
                 player.setVelocity(player.getVelocity().multiply(0.5)); //anti cheats
                 return;

@@ -1,8 +1,5 @@
 package me.tontito.coolprotection;
 
-import javax.imageio.ImageIO;
-import java.awt.*;
-import java.awt.image.BufferedImage;
 import java.io.*;
 import java.net.URL;
 import java.time.LocalDateTime;
@@ -59,29 +56,7 @@ public class Utils {
     }
 
 
-//            main.getServer().getScheduler().runTaskAsynchronously(main, () -> {
-//                try {
-//                    Utils.getScreenshot();
-//                } catch (Exception e) {
-//                    Utils.logToFile("Ticks Logger_debug",e.getMessage());
-//                }
-//            }, 0L);
-
-    public static void getScreenshot() throws Exception {
-        Rectangle rec = new Rectangle(Toolkit.getDefaultToolkit().getScreenSize());
-        Robot robot = new Robot();
-        BufferedImage img = robot.createScreenCapture(rec);
-
-        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH_mm_ss"); // Set the Time Format
-        LocalDateTime now = LocalDateTime.now(); // Get the time
-        File saveTo = new File(main.getDataFolder(), dtf.format(now) + "imagem.jpg");
-
-        ImageIO.write(img, "jpg", saveTo);
-    }
-
-
     public static double round(double num, int digits) {
-
         // epsilon correction
         double n = Double.longBitsToDouble(Double.doubleToLongBits(num) + 1);
         double p = Math.pow(10, digits);

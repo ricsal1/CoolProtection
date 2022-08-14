@@ -35,6 +35,7 @@ public class Main extends JavaPlugin {
     protected int ExplosionLevel;
     protected boolean speedProtection;
     protected boolean hackProtection;
+    protected boolean antiChatReport;
     protected int maxRedstone;
     protected int maxRedstoneChunk;
     protected String DEFAULT_RESOURCE;
@@ -90,14 +91,13 @@ public class Main extends JavaPlugin {
 
     private void setupConfig() {
         FileConfiguration config = getConfig();
+        File dataFolder = getDataFolder();
+
+        if (!dataFolder.exists()) {
+            dataFolder.mkdir();
+        }
 
         if (!config.contains("ExplodeProtection")) {
-            File dataFolder = getDataFolder();
-
-            if (!dataFolder.exists()) {
-                dataFolder.mkdir();
-            }
-
             config.options().header("==== CoolProtection Configs ====");
             config.addDefault("ExplodeProtection", true);
             config.addDefault("WitherProtection", true);
@@ -124,6 +124,10 @@ public class Main extends JavaPlugin {
         if (!config.contains("maxRedstoneComponents")) {
             config.addDefault("maxRedstoneComponents", 150);
             config.addDefault("maxRedstoneChunkComponents", 40);
+        }
+
+        if (!config.contains("antiChatReport")) {
+            config.addDefault("antiChatReport", false);
         }
 
         config.options().copyDefaults(true);
@@ -182,6 +186,12 @@ public class Main extends JavaPlugin {
         } catch (Exception e) {
             DEFAULT_RESOURCE = "";
             DEFAULT_RESOURCE_HASH = "";
+        }
+
+        try {
+            antiChatReport = getConfig().getBoolean("antiChatReport");
+        } catch (Exception e) {
+            antiChatReport = false;
         }
 
         if (totalMaxChunkEntities != getServer().getWorld("world").getSpawnLimit(MONSTER)) {
