@@ -154,8 +154,8 @@ public class Listeners implements Listener {
     }
 
 
-    @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
-    public void onChatReportPrevent(AsyncPlayerChatEvent e) {
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onChatReportPrevent(@NotNull PlayerChatEvent e) {
 
         if (!main.antiChatReport) {
             return;

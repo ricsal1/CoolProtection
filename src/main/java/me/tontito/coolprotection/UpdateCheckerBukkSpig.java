@@ -19,8 +19,6 @@ public class UpdateCheckerBukkSpig extends BukkitRunnable {
         projectName = main.getDescription().getName();
         this.project = main.getDescription().getName().toLowerCase();
 
-        Bukkit.getLogger().info(main.serverVersion + "  versao ");
-
         runTaskLaterAsynchronously(main, 20);
     }
 
@@ -58,7 +56,6 @@ public class UpdateCheckerBukkSpig extends BukkitRunnable {
         return response;
     }
 
-
     private void promptUpdate(String serverVersion, String Url) {
 
         if (serverVersion == null) {
@@ -72,7 +69,7 @@ public class UpdateCheckerBukkSpig extends BukkitRunnable {
         serverVersion = tmpServerVersion;
 
         String currentVersion = main.getDescription().getVersion();
-        int versionStatus = checkGreater(serverVersion, currentVersion);
+        int versionStatus = Utils.checkGreater(serverVersion, currentVersion);
 
         if (versionStatus == -1) {
             Bukkit.getLogger().info(" THERE IS A NEW UPDATE AVAILABLE Version: " + serverVersion +
@@ -86,32 +83,6 @@ public class UpdateCheckerBukkSpig extends BukkitRunnable {
             Bukkit.getLogger().info(" Unknown error checking version (" + versionStatus + ")" + serverVersion + "   " + currentVersion);
         }
 
-    }
-
-
-    private int checkGreater(String v1, String v2) {
-        int counter = v1.split("\\.").length;
-
-        if (counter > v2.split("\\.").length) v2 = v2 + ".0";
-        if (counter < v2.split("\\.").length) {
-            v1 = v1 + ".0";
-            counter++;
-        }
-
-        for (int k = 0; k < counter; k++) {
-            try {
-                if (Integer.parseInt(v1.split("\\.")[k]) > Integer.parseInt(v2.split("\\.")[k])) {
-                    return -1;
-                } else if (Integer.parseInt(v1.split("\\.")[k]) < Integer.parseInt(v2.split("\\.")[k])) {
-                    return 1;
-                } else {
-                    //next loop
-                }
-            } catch (Exception e) {
-                return -2;
-            }
-        }
-        return 0;//same version
     }
 
 }

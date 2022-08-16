@@ -28,13 +28,13 @@ public class TpsCheck implements Listener {
     private int lastSecond = 0;
     private int currSecond = 0;
     private int lastMinuteClean;
-    private Hashtable playersWithScoreboard = new Hashtable();
+    private Hashtable<Player,String> playersWithScoreboard = new Hashtable<>();
     private double average1, average2;
 
     protected int redStoneObjs = 0;
     protected int lastRedStone = 0;
-    protected Hashtable<Chunk,Integer> redStoneChunk = new Hashtable<>();
-    protected Hashtable<Location,Integer> redStoneBlockComponents = new Hashtable<>();
+    protected Hashtable<Chunk, Integer> redStoneChunk = new Hashtable<>();
+    protected Hashtable<Location, Integer> redStoneBlockComponents = new Hashtable<>();
     private int lagDuration = 0;
     private String lastAlert = "";
     private int lastAlertCounter = 0;
@@ -52,7 +52,7 @@ public class TpsCheck implements Listener {
                     main, () -> {
                         updateTps(0);
                     }, 0,// waits 0 ticks
-                    1 // 1 tick de intervalo (tick interno, assume-se que vamos receber os 20 num segundo, se faltar algum é porque o servidor esta com dificuldades)
+                    1 // 1 tick de interval (tick interno, 20 by second, if at least one is missing then we have problems)
             );
         }
 
@@ -114,11 +114,6 @@ public class TpsCheck implements Listener {
     }
 
 
-    public int lastSecond() {
-        return lastSecond;
-    }
-
-
     private void adjustRuntimeSettings(LocalDateTime date, int mytps) {
 
         Player player = null;
@@ -163,10 +158,10 @@ public class TpsCheck implements Listener {
             if (changed)
                 Utils.logToFile("Protection Manager", "TPS " + lastTPS() + " Increased: Max LivingEntities " + main.maxLiving + "  maxEntities " + main.maxEntities + "  maxChunkEntities " + main.maxChunkEntities);
 
-        } else if (mytps < 18) {
+        } else if (mytps > 14 && mytps < 18) {
+
             main.tpsLevel = 1;
             lagDuration = 0;
-
             boolean changed = false;
 
             if (main.maxLiving > 900) {
@@ -193,7 +188,7 @@ public class TpsCheck implements Listener {
             if (changed)
                 Utils.logToFile("Protection Manager", "TPS " + lastTPS() + " Adjusted: Max LivingEntities " + main.maxLiving + "  maxEntities " + main.maxEntities + "  maxChunkEntities " + main.maxChunkEntities);
 
-        } else if (mytps <= 14) {
+        } else {
 
             if (lagDuration > 2) {
                 main.maxLiving = main.maxLiving - 10;
@@ -206,7 +201,6 @@ public class TpsCheck implements Listener {
             lagDuration++;
 
             emergencyClean(date);
-            return;
         }
     }
 
@@ -305,13 +299,13 @@ public class TpsCheck implements Listener {
     private void showLagToPlayers() {
 
         //alerts are the same for all users, so we can do this
-        if (main.alert.length() > 0 && lastAlertCounter > 4 && lastAlert.equals(main.alert) ) {
+        if (main.alert.length() > 0 && lastAlertCounter > 4 && lastAlert.equals(main.alert)) {
             main.alert = "";
             lastAlert = "";
             lastAlertCounter = 0;
-        }else if (main.alert.length() > 0 && lastAlertCounter <= 4 && lastAlert.equals(main.alert) ) {
+        } else if (main.alert.length() > 0 && lastAlertCounter <= 4 && lastAlert.equals(main.alert)) {
             lastAlertCounter++;
-        }  else if (main.alert.length() > 0 && !lastAlert.equals(main.alert)) {
+        } else if (main.alert.length() > 0 && !lastAlert.equals(main.alert)) {
             lastAlert = main.alert;
             lastAlertCounter = 0;
         }
@@ -363,7 +357,7 @@ public class TpsCheck implements Listener {
 
         Objective obj = board.registerNewObjective("Lagmeter", "dummy", "Lagmeter");
         obj.setDisplaySlot(DisplaySlot.SIDEBAR);
-        obj.setDisplayName(ChatColor.BOLD + "----Lagmeter----");
+        obj.setDisplayName(ChatColor.BOLD + "----Lagmeter " + main.getDescription().getVersion() + "----");
 
         Team t = board.registerNewTeam("t");
         t.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.NEVER);
@@ -382,7 +376,7 @@ public class TpsCheck implements Listener {
 
         Maps = board.registerNewTeam("Lagmeter2");
         Maps.addEntry(ChatColor.RED.toString());
-        Maps.setPrefix(ChatColor.WHITE + "Count: ");
+        Maps.setPrefix(ChatColor.WHITE + "World Counts: ");
         Maps.setSuffix(ChatColor.GREEN + "");
         obj.getScore(ChatColor.RED.toString()).setScore(5);
 
@@ -438,14 +432,14 @@ public class TpsCheck implements Listener {
             }
         } else {
             nearbyLivingEntities = player.getWorld().getNearbyLivingEntities(player.getLocation(), 30, 200).size();
-            nearbyEntities = player.getWorld().getNearbyEntities(player.getLocation(), 30, 200,30).size();
+            nearbyEntities = player.getWorld().getNearbyEntities(player.getLocation(), 30, 200, 30).size();
         }
 
         Maps = board.getTeam("Lagmeter1");
-        Maps.setSuffix(ChatColor.GREEN + "NBL: " + nearbyLivingEntities + "  NBE: " + nearbyEntities  + "  Chk: " + currentChunkEntities + "  CHKTile: " + currentChunkTileEntities);
+        Maps.setSuffix(ChatColor.GREEN + "NBL: " + nearbyLivingEntities + "  NBE: " + nearbyEntities + "  Chk: " + currentChunkEntities + "  CHKTile: " + currentChunkTileEntities);
 
         Maps = board.getTeam("Lagmeter2");
-        Maps.setSuffix(ChatColor.GREEN + "World Ent: " + currentEntities + "  World Liv: " + currentLiving);
+        Maps.setSuffix(ChatColor.GREEN + "Entit: " + currentEntities + "  Living: " + currentLiving + "  Players: " + player.getWorld().getPlayerCount());
 
         Maps = board.getTeam("Lagmeter3");
         Maps.setSuffix(ChatColor.GREEN + "Chk: " + main.maxChunkEntities + "  Ent: " + main.maxEntities + "  Liv: " + main.maxLiving);
