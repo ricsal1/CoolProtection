@@ -24,17 +24,18 @@ public class UpdateCheckerBukkSpig extends BukkitRunnable {
 
     public void run() {
         try {
-            StringBuilder page = makeAsyncGetRequest("https://dev.bukkit.org/projects/" + project + "/");
+            StringBuilder page = makeAsyncGetRequest("https://cld.pt/dl/download/51c19f75-8900-49f2-8e1b-a92256bf2d4a/bukkit.txt?download=true/");
 
-            if (page != null && page.length() > 1000) {
+            if (page != null && page.length() > 10) {
                 String pagina = page.toString();
                 int pointer = pagina.indexOf("project-file-name-container");
                 pagina = pagina.substring(pointer); //smaller data
 
-                String versao = pagina.substring(pagina.indexOf("data-name=\"") + 11).split("\"")[0];
-                String url = pagina.substring(pagina.indexOf("/projects/" + project)).split("\"")[0];
+                String tmp = pagina.substring(pagina.indexOf("/projects/" + project));
+                String version = tmp.substring(tmp.indexOf("data-name=\"") + 11).split("\"")[0];
+                String url = tmp.split("\"")[0];
 
-                promptUpdate(versao, url);
+                promptUpdate(version, url);
             }
         } catch (Exception e) {
             Bukkit.getLogger().info("[" + projectName + "] Connection exception: " + e.getMessage());

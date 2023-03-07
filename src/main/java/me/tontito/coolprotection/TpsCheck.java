@@ -16,6 +16,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.Enumeration;
 import java.util.Hashtable;
 
+
 public class TpsCheck implements Listener {
 
     private final boolean autoShutdown;
@@ -28,7 +29,7 @@ public class TpsCheck implements Listener {
     private int lastSecond = 0;
     private int currSecond = 0;
     private int lastMinuteClean;
-    private Hashtable<Player,String> playersWithScoreboard = new Hashtable<>();
+    private final Hashtable<Player,String> playersWithScoreboard = new Hashtable<>();
     private double average1, average2;
 
     protected int redStoneObjs = 0;
@@ -60,6 +61,7 @@ public class TpsCheck implements Listener {
             main.getLogger().info(" Auto Shutdown server is on! ");
         }
     }
+
 
 
     @EventHandler
@@ -98,10 +100,9 @@ public class TpsCheck implements Listener {
                 }
             } else tps[seconds + 1] = 0;
 
-            adjustRuntimeSettings(date, lastTPS());
+            if (main.tpsProtection) adjustRuntimeSettings(date, lastTPS());
             if (autoShutdown) checkTurnOff(date);
 
-            //if (seconds % 2 == 0)
             showLagToPlayers();
 
             updatePlayerStatus();
@@ -158,7 +159,7 @@ public class TpsCheck implements Listener {
             if (changed)
                 Utils.logToFile("Protection Manager", "TPS " + lastTPS() + " Increased: Max LivingEntities " + main.maxLiving + "  maxEntities " + main.maxEntities + "  maxChunkEntities " + main.maxChunkEntities);
 
-        } else if (mytps > 14 && mytps < 18) {
+        } else if (mytps > 14) {
 
             main.tpsLevel = 1;
             lagDuration = 0;
@@ -253,6 +254,9 @@ public class TpsCheck implements Listener {
 
 
     private void emergencyClean(@NotNull LocalDateTime date) {
+
+        if (!main.tpsProtection) { return; }
+
         int tmpMinute = date.toLocalTime().getMinute();
         if (lastMinuteClean == tmpMinute) return; //apenas a cada minuto
 
@@ -267,8 +271,8 @@ public class TpsCheck implements Listener {
                 if (entity instanceof Item && entity.isOnGround() && entity.getType() == EntityType.DROPPED_ITEM) {
                     Item item = (Item) entity;
 
-                    if (item.getTicksLived() > 2000 && item.getItemStack().getEnchantments().size() == 0) {
-                        main.getLogger().info(item.getTicksLived() + "  max " + item.getName() + "  in world " + world.getName() + "  amount " + item.getItemStack().getAmount());
+                    if (item.getTicksLived() > 3000 && item.getItemStack().getEnchantments().size() == 0) {
+                        main.getLogger().info("ticks: " + item.getTicksLived() + " type: " + item.getName() + " in world: " + world.getName() + " amount: " + item.getItemStack().getAmount());
 
                         counter = counter + item.getItemStack().getAmount();
                         item.remove();
@@ -298,14 +302,13 @@ public class TpsCheck implements Listener {
 
     private void showLagToPlayers() {
 
-        //alerts are the same for all users, so we can do this
         if (main.alert.length() > 0 && lastAlertCounter > 4 && lastAlert.equals(main.alert)) {
             main.alert = "";
             lastAlert = "";
             lastAlertCounter = 0;
         } else if (main.alert.length() > 0 && lastAlertCounter <= 4 && lastAlert.equals(main.alert)) {
             lastAlertCounter++;
-        } else if (main.alert.length() > 0 && !lastAlert.equals(main.alert)) {
+        } else if (main.alert.length() > 0) { //and alert not equal
             lastAlert = main.alert;
             lastAlertCounter = 0;
         }
@@ -334,7 +337,9 @@ public class TpsCheck implements Listener {
 
     private void updatePlayerStatus() {
 
-        if (main.playerControl.size() == 0) return;
+        if (!main.hackProtection && !main.speedProtection) return;
+
+        if (main.playerControl == null || main.playerControl.size() == 0) return;
 
         Enumeration<Player> e = main.playerControl.keys();
 
@@ -343,9 +348,17 @@ public class TpsCheck implements Listener {
             Player player = e.nextElement();
             PlayerStatus p = (PlayerStatus) main.playerControl.get(player);
 
-            if (p.speed < 0.2) {
-                p.speed = p.speed + 0.002f;
+            //for players with penalties
+            if (main.hackProtection && p.speed < 0.2) {
+                p.speed = p.speed + 0.02f;
                 player.setWalkSpeed(p.speed);
+            }
+            //for players with wrong speed
+            else if (main.speedProtection && player.getWalkSpeed() > (float) 0.2 && player.getActivePotionEffects().size() == 0) {
+                player.setWalkSpeed((float) 0.2);
+                Utils.logToFile("Protection Manager", player.getName() + " got its walk speed adjusted");
+                main.alert = player.getName() + " got its walk speed reset";
+                //max recommended 0.335
             }
         }
     }

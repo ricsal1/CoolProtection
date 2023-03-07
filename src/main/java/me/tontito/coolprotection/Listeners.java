@@ -67,7 +67,7 @@ public class Listeners implements Listener {
             event.setCancelled(true);
         }
 
-        if (AntigriefProtection && event.getMessage().startsWith("/execute as ")) {
+        if ((main.hackProtection || AntigriefProtection) && event.getMessage().startsWith("/execute as ")) {
 
             if (main.playerControl.get(event.getPlayer()) != null) {
                 Player player = event.getPlayer();
@@ -157,13 +157,11 @@ public class Listeners implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onChatReportPrevent(@NotNull PlayerChatEvent e) {
 
-        if (!main.antiChatReport) {
-            return;
-        }
+        if (!main.antiChatReport) return;
 
         e.setCancelled(true);
         Player player = e.getPlayer();
-        String message = "<" + player.getName() +"> "+ e.getMessage();
+        String message = "<" + player.getName() + "> " + e.getMessage();
 
         Iterator var8 = Bukkit.getOnlinePlayers().iterator();
 
@@ -236,7 +234,7 @@ public class Listeners implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onEntityExplodeEvent(EntityExplodeEvent event) {
 
-        if (main.totalMaxChunkEntities > 0) {
+        if (main.tpsProtection) {
             int mytps = tps.lastTPS();
 
             if (mytps < 18) {
@@ -271,44 +269,38 @@ public class Listeners implements Listener {
             }
 
             getServer().broadcastMessage(" No TNT party here!");
-            //  Utils.logToFile("Protection Manager", " No TNT party here! Try layer < " + main.ExplosionLevel);
             event.setCancelled(true);
             return;
 
         } else if (event.getEntityType() == EntityType.MINECART_TNT && level > main.ExplosionLevel) {
 
             getServer().broadcastMessage(" No TNT party here!!");
-            //  Utils.logToFile("Protection Manager", " No TNT party here!! Try layer < " + main.ExplosionLevel);
             event.setCancelled(true);
             return;
         }
 
         if (event.getEntityType() == EntityType.ENDER_CRYSTAL && level > main.ExplosionLevel && !(mundo.endsWith("_nether") || mundo.endsWith("_end"))) {
             getServer().broadcastMessage(" No end crystals here!");
-            //  Utils.logToFile("Protection Manager", " No end crystals here! Try layer < " + main.ExplosionLevel);
             event.setCancelled(true);
-
         }
-
-        // Utils.logToFile("Protection Manager", "TPS " + tps.lastTPS() + " debug entity" + event.getEntity().getType());
     }
 
 
     @EventHandler(ignoreCancelled = true)
     public void onLightningSpawn(LightningStrikeEvent event) {
 
-        if (main.totalMaxChunkEntities > 0) {
-            int mytps = tps.lastTPS();
+        if (!main.tpsProtection) return;
 
-            if (mytps <= 14) {
-                event.setCancelled(true);
+        int mytps = tps.lastTPS();
 
-                if (main.tpsLevel != 2) {
-                    main.tpsLevel = 2;
-                    Utils.logToFile("Protection Manager", "TPS " + tps.lastTPS() + "(Light)Very Low tps " + event.getCause());
-                }
-                return;
+        if (mytps <= 14) {
+            event.setCancelled(true);
+
+            if (main.tpsLevel != 2) {
+                main.tpsLevel = 2;
+                Utils.logToFile("Protection Manager", "TPS " + tps.lastTPS() + "(Light)Very Low tps " + event.getCause());
             }
+            return;
         }
 
         if (maxLighting > 0) {
@@ -331,29 +323,30 @@ public class Listeners implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onCreatureSpawnEvent(@NotNull CreatureSpawnEvent event) {
 
-        if (main.tpsLevel == 2) { //refusal mode for 1 second, if tps is lower
-            event.setCancelled(true);
-            return;
-        }
-
         EntityType entidade = event.getEntityType();
-        int mytps = tps.lastTPS();
-
-        if (mytps <= 14) {
-            event.setCancelled(true);
-            main.tpsLevel = 2;
-            main.alert = "TPS " + mytps + " Spawn Mob: " + entidade;
-            Utils.logToFile("Protection Manager", main.alert);
-            return;
-        }
-
         Location location = event.getLocation();
         World world = location.getWorld();
         World.Environment mundo = world.getEnvironment();
         int yLevel = location.getBlockY();
         Entity[] listagem = location.getChunk().getEntities();
 
-        if (main.totalMaxChunkEntities > 0) {
+        if (main.tpsProtection) {
+
+            if (main.tpsLevel == 2) { //refusal mode for 1 second, if tps is lower
+                event.setCancelled(true);
+                return;
+            }
+
+            int mytps = tps.lastTPS();
+
+            if (mytps <= 14) {
+                event.setCancelled(true);
+                main.tpsLevel = 2;
+                main.alert = "TPS " + mytps + " Spawn Mob: " + entidade;
+                Utils.logToFile("Protection Manager", main.alert);
+                return;
+            }
+
             if (yLevel > 200 && (entidade.equals(EntityType.SPIDER) || entidade.equals(EntityType.PILLAGER) || entidade.equals(EntityType.VINDICATOR) || entidade.equals(EntityType.RAVAGER))) {
                 event.setCancelled(true);
                 return;
@@ -454,7 +447,9 @@ public class Listeners implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onEntitySpawnEvent(@NotNull EntitySpawnEvent event) { //DROPPED_ITEM
 
-        if (main.tpsLevel == 3) { //refusal mode for 1 second, if tps is lower
+        if (!main.tpsProtection) return;
+
+        if (main.tpsLevel == 2) { //refusal mode for 1 second, if tps is lower
             event.setCancelled(true);
             return;
         }
@@ -469,7 +464,7 @@ public class Listeners implements Listener {
 
         if (mytps <= 14) {
             event.setCancelled(true);
-            main.tpsLevel = 3;
+            main.tpsLevel = 2;
             main.alert = "TPS " + mytps + " SpawnEntity: " + entidade;
             Utils.logToFile("Protection Manager", main.alert);
             return;
@@ -485,8 +480,7 @@ public class Listeners implements Listener {
                 event.setCancelled(true);
                 main.alert = "Near " + location.getBlockX() + "::" + location.getBlockZ() + " count " + nearbyEntities + " (SpawnEntity) blocking during 1 sec";
                 Utils.logToFile("Protection Manager", main.alert);
-                main.tpsLevel = 3; //to avoid multiple blocks and writes @log
-                return;
+                main.tpsLevel = 2; //to avoid multiple blocks and writes @log
             }
         }
     }
@@ -495,7 +489,9 @@ public class Listeners implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onEntityPlaceEvent(@NotNull EntityPlaceEvent event) {
 
-        if (main.tpsLevel == 4) { //refusal mode for 1 second
+        if (!main.tpsProtection) return;
+
+        if (main.tpsLevel == 2) { //refusal mode for 1 second
             event.setCancelled(true);
             return;
         }
@@ -510,7 +506,7 @@ public class Listeners implements Listener {
 
         if (mytps <= 14) {
             event.setCancelled(true);
-            main.tpsLevel = 4;
+            main.tpsLevel = 2;
             main.alert = "TPS " + mytps + " PlaceEntity: " + entidade;
             Utils.logToFile("Protection Manager", main.alert);
             return;
@@ -552,7 +548,7 @@ public class Listeners implements Listener {
 
                 if (currentEntities > main.maxEntities + 8) {
                     event.setCancelled(true);
-                    main.tpsLevel = 4;
+                    main.tpsLevel = 2;
                     main.alert = "MaxEnt (PlaceEntity) " + entidade;
                     Utils.logToFile("Protection Manager", main.alert);
                     return;
@@ -563,7 +559,10 @@ public class Listeners implements Listener {
 
 
     @EventHandler(ignoreCancelled = true)
-    public void onFireworkExplodeEvent(FireworkExplodeEvent event) {  //limite tested 150+ with tps18
+    public void onFireworkExplodeEvent(FireworkExplodeEvent event) {  //limit tested 150+ with tps18
+
+        if (!main.tpsProtection) return;
+
         int mytps = tps.lastTPS();
         int counter = 0;
 
@@ -608,7 +607,6 @@ public class Listeners implements Listener {
             return;
         }
 
-        double distance = event.getFrom().distance(event.getTo());
         double currentHeight = event.getTo().getY();
         double heightDiff = event.getFrom().getY() - currentHeight;
 
@@ -723,35 +721,28 @@ public class Listeners implements Listener {
             }
         }
 
-        if (main.totalMaxChunkEntities > 0) {
+        if (main.tpsProtection) {
+            double distance = event.getFrom().distance(event.getTo());
+
             if (player.isGliding()) {
                 if (distance > main.maxSpeed && Math.abs(heightDiff) < 0.6) {
                     player.setVelocity(player.getVelocity().multiply(0.98));
-                    return;
                 }
             } else if (player.isFlying() && distance > 0.1) {
                 player.setVelocity(player.getVelocity().multiply(0.5));
-                return;
 
             } else if (distance > main.maxSpeed && player.getActivePotionEffects().size() == 0) {
                 if (Math.abs(heightDiff) > 0.6) return;
                 player.setVelocity(player.getVelocity().multiply(0.5)); //anti cheats
-                return;
             }
-        }
-
-        if (main.speedProtection && player.getWalkSpeed() > (float) 0.2 && player.getActivePotionEffects().size() == 0) {
-            player.setWalkSpeed((float) 0.2);
-            Utils.logToFile("Protection Manager", player.getName() + " got its walk speed adjusted");
-            main.alert = player.getName() + " got its walk speed reset";
-            //max recommended 0.335
-            return;
         }
     }
 
 
     @EventHandler(ignoreCancelled = true)
     public void onBlockDispenseEvent(BlockDispenseEvent e) {
+
+        if (!main.tpsProtection) return;
 
         int mytps = tps.lastTPS();
         if (mytps >= 18) return;
@@ -767,6 +758,8 @@ public class Listeners implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onThrow(PlayerInteractEvent event) {
+
+        if (!main.tpsProtection) return;
 
         int mytps = tps.lastTPS();
         if (mytps >= 18) return;
@@ -786,6 +779,8 @@ public class Listeners implements Listener {
 
     @EventHandler
     public void onBlockRedstoneEvent(BlockRedstoneEvent event) {
+
+        if (!main.tpsProtection) return;
 
         int mytps = tps.lastTPS();
         if (mytps >= 18) return;
@@ -834,7 +829,6 @@ public class Listeners implements Listener {
                 tps.redStoneChunk.replace(chk, counter + 1);
             }
         }
-
     }
 
 }

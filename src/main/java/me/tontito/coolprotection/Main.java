@@ -6,11 +6,10 @@ import org.bukkit.GameRule;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import java.io.File;
-import java.util.Hashtable;
-
 import static org.bukkit.entity.SpawnCategory.MONSTER;
 
+import java.io.File;
+import java.util.Hashtable;
 
 public class Main extends JavaPlugin {
 
@@ -23,12 +22,16 @@ public class Main extends JavaPlugin {
     protected int maxLiving = 800;
     protected String alert = "";
     protected float maxSpeed = 0;
-    protected int tpsLevel = 0; //0 = normal,1 = alert, 2 = very low
+    protected int tpsLevel = 0; //0 = normal, 1 = alert, 2 = very low
     protected String serverStatus = null;
+    protected int serverVersion = 0;
+
     private boolean autoShutdown = false;
     private int autoShutDownTime = 0;
     private int autoShutDownCounterTime = 15;
-    protected int serverVersion = 0;
+
+    protected boolean tpsProtection;
+
     protected boolean ExplodeProtection;
     protected boolean WitherProtection;
     protected int WitherLevel;
@@ -44,20 +47,24 @@ public class Main extends JavaPlugin {
 
 
     public void onEnable() {
-        String version = Bukkit.getVersion();
+        String version = Bukkit.getVersion().toUpperCase();
 
-        if (version.contains("Paper")) {
+        if (version.contains("PAPER")) {
             serverVersion = 1;
-        } else if (version.contains("Bukkit")) {
+        } else if (version.contains("BUKKIT")) {
             serverVersion = 2;
-        } else if (version.contains("Spigot")) {
+        } else if (version.contains("SPIGOT")) {
             serverVersion = 3;
-        } else if (version.contains("Purpur")) {
+        } else if (version.contains("PURPUR")) {
             serverVersion = 4;
-        } else if (version.contains("Pufferfish")) {
+        } else if (version.contains("PUFFERFISH")) {
             serverVersion = 5;
+        } else if (version.contains("-PETAL-")) {
+            serverVersion = 6;
+        } else if (version.contains("-SAKURA-")) {
+            serverVersion = 7;
         } else {
-            getLogger().info("Server type not supported or tested! " + version);
+            getLogger().info(ChatColor.RED + "Server type not supported or tested! " + version);
             getServer().getPluginManager().disablePlugin(this);
             return;
         }
@@ -74,13 +81,18 @@ public class Main extends JavaPlugin {
         tps = new TpsCheck(this, autoShutdown, autoShutDownCounterTime, autoShutDownTime);
         listen = new Listeners(this, tps);
 
-        if (serverVersion == 1 || serverVersion == 4 || serverVersion == 5) {
+        if (serverVersion == 1 || serverVersion == 4 || serverVersion == 5 || serverVersion == 6 || serverVersion == 7) {
             getServer().getPluginManager().registerEvents(listen, this);
             getServer().getPluginManager().registerEvents(tps, this);
         } else {
             getServer().getPluginManager().registerEvents(listen, this);
         }
-        getLogger().info(ChatColor.GREEN + " Enabled and balanced for " + version);
+
+        if (tpsProtection) {
+            getLogger().info(ChatColor.GREEN + " Enabled and balanced for " + version);
+        } else {
+            getLogger().info(ChatColor.GREEN + " Enabled without TPS control, for " + version);
+        }
     }
 
 
@@ -93,9 +105,7 @@ public class Main extends JavaPlugin {
         FileConfiguration config = getConfig();
         File dataFolder = getDataFolder();
 
-        if (!dataFolder.exists()) {
-            dataFolder.mkdir();
-        }
+        if (!dataFolder.exists()) dataFolder.mkdir();
 
         if (!config.contains("ExplodeProtection")) {
             config.options().header("==== CoolProtection Configs ====");
@@ -128,6 +138,10 @@ public class Main extends JavaPlugin {
 
         if (!config.contains("antiChatReport")) {
             config.addDefault("antiChatReport", false);
+        }
+
+        if (!config.contains("tpsProtection")) {
+            config.addDefault("tpsProtection", true);
         }
 
         config.options().copyDefaults(true);
@@ -204,16 +218,17 @@ public class Main extends JavaPlugin {
             getServer().getWorld("world").setSpawnLimit(MONSTER, tmpChuck);
             getServer().getWorld("world").setGameRule(GameRule.MAX_ENTITY_CRAMMING, 24); //to fix previous mistake
         }
+
+        try {
+            tpsProtection = getConfig().getBoolean("tpsProtection");
+        } catch (Exception e) {
+            tpsProtection = false;
+        }
     }
 
 
     protected void setStatus(String newStatus) {
         serverStatus = newStatus;
-    }
-
-
-    public void print(String text) {
-        getLogger().info(text);
     }
 
 }
