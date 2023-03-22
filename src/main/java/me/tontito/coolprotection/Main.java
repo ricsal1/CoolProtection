@@ -63,6 +63,8 @@ public class Main extends JavaPlugin {
             serverVersion = 6;
         } else if (version.contains("-SAKURA-")) {
             serverVersion = 7;
+        } else if (version.contains("-FOLIA-")) {
+            serverVersion = 8;
         } else {
             getLogger().info(ChatColor.RED + "Server type not supported or tested! " + version);
             getServer().getPluginManager().disablePlugin(this);
@@ -81,7 +83,7 @@ public class Main extends JavaPlugin {
         tps = new TpsCheck(this, autoShutdown, autoShutDownCounterTime, autoShutDownTime);
         listen = new Listeners(this, tps);
 
-        if (serverVersion == 1 || serverVersion == 4 || serverVersion == 5 || serverVersion == 6 || serverVersion == 7) {
+        if (serverVersion == 1 || serverVersion == 4 || serverVersion == 5 || serverVersion == 6 || serverVersion == 7 || serverVersion == 8) {
             getServer().getPluginManager().registerEvents(listen, this);
             getServer().getPluginManager().registerEvents(tps, this);
         } else {

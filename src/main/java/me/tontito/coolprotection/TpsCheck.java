@@ -1,5 +1,6 @@
 package me.tontito.coolprotection;
 
+import com.destroystokyo.paper.event.entity.PreCreatureSpawnEvent;
 import com.destroystokyo.paper.event.server.ServerTickEndEvent;
 import org.bukkit.*;
 import org.bukkit.entity.*;
@@ -13,6 +14,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.Hashtable;
 
@@ -23,13 +25,14 @@ public class TpsCheck implements Listener {
     private final int shutCounterTime;
     private final int autoShutdownTime;
     int[] tps = new int[61];
+    //private ArrayList<int[]> foliaTps;
     Main main;
     private LocalDateTime startShutTime;
     private int previousMinute = 0;
     private int lastSecond = 0;
     private int currSecond = 0;
     private int lastMinuteClean;
-    private final Hashtable<Player,String> playersWithScoreboard = new Hashtable<>();
+    private final Hashtable<Player, String> playersWithScoreboard = new Hashtable<>();
     private double average1, average2;
 
     protected int redStoneObjs = 0;
@@ -56,6 +59,11 @@ public class TpsCheck implements Listener {
                     1 // 1 tick de interval (tick interno, 20 by second, if at least one is missing then we have problems)
             );
         }
+//        else if (main.serverVersion == 8) {
+//            //Folia server specific tick handler, will handle all regional ticks (bubbles)
+//            foliaTps = new ArrayList();
+//
+//        }
 
         if (autoShutdown) {
             main.getLogger().info(" Auto Shutdown server is on! ");
@@ -63,6 +71,18 @@ public class TpsCheck implements Listener {
     }
 
 
+    @EventHandler(ignoreCancelled = true)
+    public void onpreCreatureSpawnEvent(@NotNull PreCreatureSpawnEvent event) {
+
+        if (main.tpsProtection) {
+
+            if (main.tpsLevel == 2 || lastTPS() <= 16) { //refusal mode for 1 second, if tps is lower
+                main.tpsLevel = 2;
+                event.setCancelled(true);
+                main.alert = "TPS low, Pre Creature Spawn cancelled";
+            }
+        }
+    }
 
     @EventHandler
     public void onTickEnd(@NotNull ServerTickEndEvent event) {
@@ -255,7 +275,9 @@ public class TpsCheck implements Listener {
 
     private void emergencyClean(@NotNull LocalDateTime date) {
 
-        if (!main.tpsProtection) { return; }
+        if (!main.tpsProtection) {
+            return;
+        }
 
         int tmpMinute = date.toLocalTime().getMinute();
         if (lastMinuteClean == tmpMinute) return; //apenas a cada minuto
