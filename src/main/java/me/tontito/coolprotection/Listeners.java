@@ -4,6 +4,7 @@ import org.apache.commons.lang.StringUtils;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
+import org.bukkit.block.data.Levelled;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.*;
@@ -34,7 +35,6 @@ public class Listeners implements Listener {
     private boolean AntigriefProtection = false;
     private TpsCheck tps;
     private Main main;
-
 
     public Listeners(Main main, TpsCheck tps) {
         this.main = main;
@@ -85,7 +85,7 @@ public class Listeners implements Listener {
 
 
     @EventHandler(ignoreCancelled = true)
-    public void onPlayerChat(@NotNull PlayerChatEvent chat) {
+    public void onPlayerChat(@NotNull AsyncPlayerChatEvent chat) {
 
         Player player = chat.getPlayer();
         String message = chat.getMessage().toLowerCase();
@@ -130,21 +130,23 @@ public class Listeners implements Listener {
             chat.setCancelled(true);
 
         } else if (message.equalsIgnoreCase("!autoBalance off") && player.isOp()) {
-            if (main.totalMaxChunkEntities > 0) {
-                main.totalMaxChunkEntities = 0;
+            if (main.tpsProtection) {
+                main.tpsProtection = false;
+
+                FileConfiguration config = main.getConfig();
+                config.set("tpsProtection", main.tpsProtection);
+                main.saveConfig();
+
                 player.sendRawMessage("Disabled adaptative balancing");
             }
             chat.setCancelled(true);
         } else if (message.equalsIgnoreCase("!autoBalance on") && player.isOp()) {
-            if (main.totalMaxChunkEntities == 0) {
-                try {
-                    main.totalMaxChunkEntities = main.getConfig().getInt("maxChunkEntities");
-                } catch (Exception e) {
-                    main.totalMaxChunkEntities = 30;
-                }
-                if (main.totalMaxChunkEntities == 0) {
-                    main.totalMaxChunkEntities = 30;
-                }
+            if (!main.tpsProtection) {
+                main.tpsProtection = true;
+
+                FileConfiguration config = main.getConfig();
+                config.set("tpsProtection", main.tpsProtection);
+                main.saveConfig();
 
                 player.sendRawMessage("Enabled adaptative balancing");
                 player.sendRawMessage(("Current values are TPS: " + tps.lastTPS() + " Optimal Max LivingEntities: " + main.maxLiving + "  maxEntities: " + main.maxEntities + "  maxChunkEntities: " + main.maxChunkEntities));
@@ -155,7 +157,7 @@ public class Listeners implements Listener {
 
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-    public void onChatReportPrevent(@NotNull PlayerChatEvent e) {
+    public void onChatReportPrevent(@NotNull AsyncPlayerChatEvent e) {
 
         if (!main.antiChatReport) return;
 
@@ -601,6 +603,7 @@ public class Listeners implements Listener {
 
     @EventHandler(priority = EventPriority.LOWEST, ignoreCancelled = true)
     public void onPlayerMoveEvent(@NotNull PlayerMoveEvent event) {
+
         Player player = event.getPlayer();
 
         if (!player.getGameMode().equals(GameMode.SURVIVAL)) {
@@ -827,6 +830,83 @@ public class Listeners implements Listener {
                 }
 
                 tps.redStoneChunk.replace(chk, counter + 1);
+            }
+        }
+    }
+
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onBlockPhysics(BlockPhysicsEvent event) {
+
+        if (!main.tpsProtection) return;
+
+        if (main.serverVersion == 2 || main.serverVersion == 3) return;
+
+        Block block = event.getBlock();
+
+        if (block.getType() == Material.WATER) {
+            Long chunk = block.getChunk().getChunkKey();
+
+            synchronized (this) {
+                long global = -1;
+                Integer test = main.chunkWater.get(global);
+
+                if (test == null) {
+                    main.chunkWater.put(global, 1);
+                } else {
+                    main.chunkWater.replace(global, (test + 1));
+                }
+
+                test = main.chunkWater.get(chunk);
+
+                if (test == null) {
+                    main.chunkWater.put(chunk, 1);
+                } else {
+                    main.chunkWater.replace(chunk, (test + 1));
+                }
+
+                if (main.chunkWater.get(chunk) > 400) { //limit of 400 for each chunk
+
+                    Location loc = block.getLocation();
+
+                    block.setType(Material.AIR);
+
+                    Block blockNonWaterAir = null;
+                    int jumpy = 0;
+
+                    for (int i = 1; i < 350; i++) {
+                        if (jumpy > 10) {
+                            break;
+                        }
+
+                        Location newLoc = loc.add(0, 1, 0);
+                        Block testBlock = newLoc.getBlock();
+
+                        if (testBlock.getType() == Material.WATER) {
+
+                            int level = ((Levelled) testBlock.getBlockData()).getLevel();
+                            block = testBlock;
+                            block.setType(Material.AIR);
+
+                            if (level == 0) {
+                                return; //game over mf
+                            }
+
+                            jumpy = 0;
+                        } else if (testBlock.getType() == Material.AIR) {
+                            jumpy++;
+                        } else {
+                            if (blockNonWaterAir == null) {
+                                blockNonWaterAir = testBlock;
+                            }
+                            jumpy++;
+                        }
+                    }
+
+                    if (blockNonWaterAir != null) {
+                        blockNonWaterAir.setType(Material.AIR);
+                    }
+                }
             }
         }
     }

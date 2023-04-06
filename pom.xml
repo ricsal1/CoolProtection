@@ -6,7 +6,7 @@
 
     <groupId>CoolProtection</groupId>
     <artifactId>CoolProtection</artifactId>
-    <version>1.2.5</version>
+    <version>1.7.1</version>
     <packaging>jar</packaging>
 
     <name>CoolProtection</name>
@@ -52,7 +52,14 @@
         </resources>
     </build>
 
+
+
     <repositories>
+        <repository>
+            <id>papermc</id>
+            <url>https://repo.papermc.io/repository/maven-public/</url>
+        </repository>
+
         <repository>
             <id>papermc-repo</id>
             <url>https://papermc.io/repo/repository/maven-public/</url>
@@ -64,6 +71,13 @@
     </repositories>
 
     <dependencies>
+        <dependency>
+            <groupId>dev.folia</groupId>
+            <artifactId>folia-api</artifactId>
+            <version>1.19.4-R0.1-SNAPSHOT</version>
+            <scope>provided</scope>
+        </dependency>
+
         <dependency>
             <groupId>io.papermc.paper</groupId>
             <artifactId>paper-api</artifactId>

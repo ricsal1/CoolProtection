@@ -6,17 +6,15 @@ import org.bukkit.*;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.scoreboard.DisplaySlot;
-import org.bukkit.scoreboard.Objective;
-import org.bukkit.scoreboard.Scoreboard;
-import org.bukkit.scoreboard.Team;
+import org.bukkit.scoreboard.*;
 import org.jetbrains.annotations.NotNull;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
-import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.Hashtable;
+
+import static org.bukkit.Bukkit.isOwnedByCurrentRegion;
 
 
 public class TpsCheck implements Listener {
@@ -25,7 +23,7 @@ public class TpsCheck implements Listener {
     private final int shutCounterTime;
     private final int autoShutdownTime;
     int[] tps = new int[61];
-    //private ArrayList<int[]> foliaTps;
+    int[] regions = new int[61];
     Main main;
     private LocalDateTime startShutTime;
     private int previousMinute = 0;
@@ -59,11 +57,6 @@ public class TpsCheck implements Listener {
                     1 // 1 tick de interval (tick interno, 20 by second, if at least one is missing then we have problems)
             );
         }
-//        else if (main.serverVersion == 8) {
-//            //Folia server specific tick handler, will handle all regional ticks (bubbles)
-//            foliaTps = new ArrayList();
-//
-//        }
 
         if (autoShutdown) {
             main.getLogger().info(" Auto Shutdown server is on! ");
@@ -99,6 +92,21 @@ public class TpsCheck implements Listener {
         else tps[seconds] = tps[seconds] + 1;
 
         if (currSecond != seconds) {
+            //updates last second
+            if (main.serverVersion == 8) {
+                regions[currSecond] = Math.round((tps[currSecond] / 20));
+
+                if (regions[currSecond] > 0) {
+                    tps[currSecond] = tps[currSecond] / regions[currSecond];
+                }
+
+                if (currSecond == 59) {
+                    for (int i = 0; i < 57; i++) {
+                        regions[i] = 0;
+                    }
+                } else regions[currSecond + 1] = 0;
+            }
+
             lastSecond = currSecond;
             currSecond = seconds;
 
@@ -126,12 +134,21 @@ public class TpsCheck implements Listener {
             showLagToPlayers();
 
             updatePlayerStatus();
+
+            synchronized (this) {
+                main.chunkWater.clear();
+            }
         }
     }
 
 
     public int lastTPS() {
         return tps[lastSecond];
+    }
+
+
+    public int getCountRegions() {
+        return regions[lastSecond];
     }
 
 
@@ -290,6 +307,10 @@ public class TpsCheck implements Listener {
 
             for (Entity entity : world.getEntities()) {
 
+                if (main.serverVersion == 8 && !isOwnedByCurrentRegion(entity.getLocation())) {
+                    continue;
+                }
+
                 if (entity instanceof Item && entity.isOnGround() && entity.getType() == EntityType.DROPPED_ITEM) {
                     Item item = (Item) entity;
 
@@ -348,6 +369,11 @@ public class TpsCheck implements Listener {
                 playersWithScoreboard.replace(player, "1");
             } else if (playersWithScoreboard.get(player).equals("0")) {
                 playersWithScoreboard.remove(player);
+
+                if (main.serverVersion == 8) {
+                    continue;
+                }
+
                 player.setScoreboard(Bukkit.getScoreboardManager().getNewScoreboard());
                 continue;
             }
@@ -386,7 +412,26 @@ public class TpsCheck implements Listener {
     }
 
 
+    public void sendActionBar(Player player) {
+        long global = -1;
+        String x;
+        if (main.chunkWater.get(global) == null) {
+            x = "";
+        } else {
+            x = " Water count: " + main.chunkWater.get(global) + " " + (main.chunkWater.size() - 1) + " chunks";
+        }
+
+        String message = ChatColor.GREEN + "Last: " + lastTPS() + "  " + getCountRegions() + " regions  CurAvg: " + Math.round(average1) + "  PrevAvg: " + Math.round(average2) + x;
+        player.sendActionBar(message);
+    }
+
+
     private void setScoreBoard(Player player) {
+
+        if (main.serverVersion == 8) {
+            sendActionBar(player);
+            return;
+        }
 
         Scoreboard board = Bukkit.getScoreboardManager().getNewScoreboard();
 
@@ -438,6 +483,12 @@ public class TpsCheck implements Listener {
 
 
     private void updateScoreBoard(Player player) {
+
+        if (main.serverVersion == 8) {
+            sendActionBar(player);
+            return;
+        }
+
         Scoreboard board = player.getScoreboard();
         board.resetScores(player.getName());
 
@@ -473,8 +524,16 @@ public class TpsCheck implements Listener {
         Maps = board.getTeam("Lagmeter1");
         Maps.setSuffix(ChatColor.GREEN + "NBL: " + nearbyLivingEntities + "  NBE: " + nearbyEntities + "  Chk: " + currentChunkEntities + "  CHKTile: " + currentChunkTileEntities);
 
+        int playerCount;
+
+        if (main.serverVersion == 2 || main.serverVersion == 3) {
+            playerCount = Bukkit.getOnlinePlayers().size();
+        }     else {
+            playerCount= player.getWorld().getPlayerCount();
+        }
+
         Maps = board.getTeam("Lagmeter2");
-        Maps.setSuffix(ChatColor.GREEN + "Entit: " + currentEntities + "  Living: " + currentLiving + "  Players: " + player.getWorld().getPlayerCount());
+        Maps.setSuffix(ChatColor.GREEN + "Entit: " + currentEntities + "  Living: " + currentLiving + "  Players: " + playerCount);
 
         Maps = board.getTeam("Lagmeter3");
         Maps.setSuffix(ChatColor.GREEN + "Chk: " + main.maxChunkEntities + "  Ent: " + main.maxEntities + "  Liv: " + main.maxLiving);

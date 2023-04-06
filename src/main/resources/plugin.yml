@@ -1,4 +1,5 @@
 name: CoolProtection
-version: 1.2.5
+version: 1.7.1
 main: me.tontito.coolprotection.Main
 api-version: 1.18
+folia-supported: true

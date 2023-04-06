@@ -45,6 +45,7 @@ public class Main extends JavaPlugin {
     protected String DEFAULT_RESOURCE_HASH;
     public Hashtable playerControl = new Hashtable();
 
+    public Hashtable<Long, Integer> chunkWater = new Hashtable();
 
     public void onEnable() {
         String version = Bukkit.getVersion().toUpperCase();

@@ -21,7 +21,13 @@ public class UpdateChecker extends BukkitRunnable {
         this.main = main;
         projectName = main.getDescription().getName();
         this.project = main.getDescription().getName().toLowerCase();
-        runTaskLaterAsynchronously(main, 20);
+
+        if (main.serverVersion == 8) {
+            run();
+        } else {
+            runTaskLaterAsynchronously(main, 20);
+        }
+
     }
 
     public void run() {
