@@ -1,5 +1,7 @@
-package me.tontito.coolprotection;
+package me.tontito.coolprotection.Updater;
 
+import me.tontito.coolprotection.Main;
+import me.tontito.coolprotection.Utils;
 import org.bukkit.Bukkit;
 import org.bukkit.scheduler.BukkitRunnable;
 
@@ -60,7 +62,7 @@ public class UpdateCheckerBukkSpig extends BukkitRunnable {
     private void promptUpdate(String serverVersion, String Url) {
 
         if (serverVersion == null) {
-            Bukkit.getLogger().info(" Unknown error checking version");
+            Bukkit.getLogger().info("[" + projectName + "] Unknown error checking version");
             return;
         }
 
@@ -73,15 +75,15 @@ public class UpdateCheckerBukkSpig extends BukkitRunnable {
         int versionStatus = Utils.checkGreater(serverVersion, currentVersion);
 
         if (versionStatus == -1) {
-            Bukkit.getLogger().info(" THERE IS A NEW UPDATE AVAILABLE Version: " + serverVersion +
+            Bukkit.getLogger().info("[" + projectName + "] THERE IS A NEW UPDATE AVAILABLE Version: " + serverVersion +
                     " Download it from here: https://dev.bukkit.org" + Url);
 
         } else if (versionStatus == 0) {
-            Bukkit.getLogger().info(" You have the latest released version");
+            Bukkit.getLogger().info("[" + projectName + "] You have the latest released version");
         } else if (versionStatus == 1) {
-            Bukkit.getLogger().info(" Congrats, you are testing a new version!");
+            Bukkit.getLogger().info("[" + projectName + "] Congrats, you are testing a new version!");
         } else {
-            Bukkit.getLogger().info(" Unknown error checking version (" + versionStatus + ")" + serverVersion + "   " + currentVersion);
+            Bukkit.getLogger().info("[" + projectName + "] Unknown error checking version (" + versionStatus + ")" + serverVersion + "   " + currentVersion);
         }
 
     }

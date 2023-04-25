@@ -110,11 +110,11 @@ public class Listeners implements Listener {
                     main.totalMaxChunkEntities = Integer.parseInt(valor);
                     player.sendRawMessage("Max chunkEntity value changed to " + valor + "  prev Game limits: " + main.getServer().getWorld("world").getSpawnLimit(MONSTER));
 
-                    if (Integer.parseInt(valor) < 50 || Integer.parseInt(valor) > 200)
+                    if (Integer.parseInt(valor) < 10 || Integer.parseInt(valor) > 200)
                         valor = "70"; //game defaults 70 from bukkit.yml
 
-                    main.getServer().getWorld("world").setGameRule(GameRule.MAX_ENTITY_CRAMMING, 24); //to fix previous mistake
-                    main.getServer().getWorld("world").setSpawnLimit(MONSTER, Integer.parseInt(valor));
+                    final int chunckLimit = Integer.parseInt(valor);
+                    main.myBukkit.Run(null, () -> main.setWorldConfigs(chunckLimit), 0);
 
                     chat.setCancelled(true);
                 }
@@ -236,6 +236,10 @@ public class Listeners implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onEntityExplodeEvent(EntityExplodeEvent event) {
 
+        Location location = event.getLocation();
+
+        if (main.serverVersion == 8 && !main.myBukkit.allowContinue(null, location, null)) return;
+
         if (main.tpsProtection) {
             int mytps = tps.lastTPS();
 
@@ -252,15 +256,14 @@ public class Listeners implements Listener {
 
         if (!main.ExplodeProtection) return;
 
-        int level = event.getEntity().getLocation().getBlockY();
-
-        String mundo = event.getLocation().getWorld().getName();
+        int level = location.getBlockY();
+        String mundo = location.getWorld().getName();
 
         if (event.getEntityType() == EntityType.PRIMED_TNT && level > main.ExplosionLevel) {
 
             Entity causer = ((TNTPrimed) event.getEntity()).getSource();
 
-            if (causer instanceof Player && main.playerControl.get(((Player) causer)) != null) {
+            if (causer instanceof Player && main.playerControl.get(causer) != null) {
                 Player player = ((Player) causer);
 
                 PlayerStatus play = (PlayerStatus) main.playerControl.get(player);
@@ -293,6 +296,10 @@ public class Listeners implements Listener {
 
         if (!main.tpsProtection) return;
 
+        Location location = event.getLightning().getLocation();
+
+        if (main.serverVersion == 8 && !main.myBukkit.allowContinue(null, location, null)) return;
+
         int mytps = tps.lastTPS();
 
         if (mytps <= 14) {
@@ -308,7 +315,7 @@ public class Listeners implements Listener {
         if (maxLighting > 0) {
             int counter = 0;
 
-            for (Entity entities : event.getLightning().getLocation().getChunk().getEntities()) {
+            for (Entity entities : location.getChunk().getEntities()) {
                 if (entities.getType().equals(EntityType.LIGHTNING)) {
                     counter++;
 
@@ -327,6 +334,9 @@ public class Listeners implements Listener {
 
         EntityType entidade = event.getEntityType();
         Location location = event.getLocation();
+
+        if (main.serverVersion == 8 && !main.myBukkit.allowContinue(null, location, null)) return;
+
         World world = location.getWorld();
         World.Environment mundo = world.getEnvironment();
         int yLevel = location.getBlockY();
@@ -473,6 +483,9 @@ public class Listeners implements Listener {
         }
 
         Location location = event.getLocation();
+
+        if (main.serverVersion == 8 && !main.myBukkit.allowContinue(null, location, null)) return;
+
         World world = location.getWorld();
 
         if (main.totalMaxChunkEntities > 0) {
@@ -500,6 +513,8 @@ public class Listeners implements Listener {
 
         Entity entidade = event.getEntity();
 
+        if (main.serverVersion == 8 && !main.myBukkit.allowContinue(entidade, null, null)) return;
+
         if (entidade.getType().isAlive()) {
             return;
         }
@@ -520,7 +535,7 @@ public class Listeners implements Listener {
 
         if (main.totalMaxChunkEntities > 0) {
 
-            int nearbyEntities = world.getNearbyEntities(location, 30, 200, 30).size();
+            int nearbyEntities = location.getNearbyEntities(30, 200, 30).size();
 
             if (nearbyEntities > (main.totalMaxChunkEntities * 2.1) && entidade instanceof Minecart) {
                 event.setCancelled(true);
@@ -565,6 +580,10 @@ public class Listeners implements Listener {
 
         if (!main.tpsProtection) return;
 
+        Location location = event.getEntity().getLocation();
+
+        if (main.serverVersion == 8 && !main.myBukkit.allowContinue(null, location, null)) return;
+
         int mytps = tps.lastTPS();
         int counter = 0;
 
@@ -572,7 +591,7 @@ public class Listeners implements Listener {
             return;
         }
 
-        for (Entity entities : event.getEntity().getLocation().getChunk().getEntities()) {
+        for (Entity entities : location.getChunk().getEntities()) {
             if (entities.getType().equals(EntityType.FIREWORK)) {
                 counter++;
 

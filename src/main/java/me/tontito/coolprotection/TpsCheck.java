@@ -6,15 +6,16 @@ import org.bukkit.*;
 import org.bukkit.entity.*;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
-import org.bukkit.scoreboard.*;
+import org.bukkit.scoreboard.DisplaySlot;
+import org.bukkit.scoreboard.Objective;
+import org.bukkit.scoreboard.Scoreboard;
+import org.bukkit.scoreboard.Team;
 import org.jetbrains.annotations.NotNull;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Enumeration;
 import java.util.Hashtable;
-
-import static org.bukkit.Bukkit.isOwnedByCurrentRegion;
 
 
 public class TpsCheck implements Listener {
@@ -24,6 +25,7 @@ public class TpsCheck implements Listener {
     private final int autoShutdownTime;
     int[] tps = new int[61];
     int[] regions = new int[61];
+    int countTicks = 0;
     Main main;
     private LocalDateTime startShutTime;
     private int previousMinute = 0;
@@ -88,54 +90,57 @@ public class TpsCheck implements Listener {
         LocalDateTime date = LocalDateTime.now();
         int seconds = date.toLocalTime().getSecond();
 
-        if (remainDuration < 0) tps[seconds] = tps[seconds] - 1;
-        else tps[seconds] = tps[seconds] + 1;
+        synchronized (this) {
+            if (remainDuration < 0) tps[seconds] = tps[seconds] - 1;
+            else tps[seconds] = tps[seconds] + 1;
 
-        if (currSecond != seconds) {
-            //updates last second
-            if (main.serverVersion == 8) {
-                regions[currSecond] = Math.round((tps[currSecond] / 20));
+            countTicks++;
 
-                if (regions[currSecond] > 0) {
-                    tps[currSecond] = tps[currSecond] / regions[currSecond];
-                }
+            if (currSecond != seconds) {
+                //updates last second
+                if (main.serverVersion == 8) {
+                    regions[currSecond] = (int) Math.floor((countTicks / 20));
 
-                if (currSecond == 59) {
-                    for (int i = 0; i < 57; i++) {
-                        regions[i] = 0;
+                    if (regions[currSecond] > 0) {
+                        tps[currSecond] = tps[currSecond] / regions[currSecond];
                     }
-                } else regions[currSecond + 1] = 0;
-            }
 
-            lastSecond = currSecond;
-            currSecond = seconds;
-
-            lastRedStone = redStoneObjs;
-            redStoneObjs = 0;
-            redStoneChunk.clear();
-            redStoneBlockComponents.clear();
-
-            if (seconds == 0) {
-                average2 = average1;
-                average1 = lastTPS();
-            } else {
-                average1 = (average1 * seconds + lastTPS()) / (seconds + 1);
-            }
-
-            if (seconds == 59) {
-                for (int i = 0; i < 57; i++) {
-                    tps[i] = 0;
+                    if (currSecond == 59) {
+                        for (int i = 0; i < 57; i++) {
+                            regions[i] = 0;
+                        }
+                    } else regions[currSecond + 1] = 0;
                 }
-            } else tps[seconds + 1] = 0;
 
-            if (main.tpsProtection) adjustRuntimeSettings(date, lastTPS());
-            if (autoShutdown) checkTurnOff(date);
+                lastSecond = currSecond;
+                currSecond = seconds;
+                countTicks = 0;
 
-            showLagToPlayers();
+                lastRedStone = redStoneObjs;
+                redStoneObjs = 0;
+                redStoneChunk.clear();
+                redStoneBlockComponents.clear();
 
-            updatePlayerStatus();
+                if (seconds == 0) {
+                    average2 = average1;
+                    average1 = lastTPS();
+                } else {
+                    average1 = (average1 * seconds + lastTPS()) / (seconds + 1);
+                }
 
-            synchronized (this) {
+                if (seconds == 59) {
+                    for (int i = 0; i < 57; i++) {
+                        tps[i] = 0;
+                    }
+                } else tps[seconds + 1] = 0;
+
+                if (main.tpsProtection) adjustRuntimeSettings(date, lastTPS());
+                if (autoShutdown) checkTurnOff(date);
+
+                showLagToPlayers();
+
+                updatePlayerStatus();
+
                 main.chunkWater.clear();
             }
         }
@@ -158,7 +163,10 @@ public class TpsCheck implements Listener {
 
         for (Player pls : Bukkit.getOnlinePlayers()) {
             player = pls;
-            break;
+
+            if (main.serverVersion == 8 && main.myBukkit.allowContinue(player, null, null)) {
+                break;
+            }
         }
 
         if (player == null) return;
@@ -166,7 +174,8 @@ public class TpsCheck implements Listener {
         World world = player.getWorld();
         int currentLiving = world.getLivingEntities().size();
         int currentEntities = world.getEntities().size();
-        int currentChunkEntities = player.getLocation().getChunk().getEntities().length;
+
+        Location local = player.getLocation();
 
         if (mytps >= 18) {
             main.tpsLevel = 0;
@@ -184,13 +193,17 @@ public class TpsCheck implements Listener {
                 changed = true;
             }
 
-            if (currentChunkEntities > main.maxChunkEntities + 3 && currentChunkEntities < main.totalMaxChunkEntities) {
-                if (currentChunkEntities < 20) {
-                    main.maxChunkEntities = currentChunkEntities;
-                } else {
-                    main.maxChunkEntities = main.maxChunkEntities + 3; //slower growth
+            if (main.maxChunkEntities > 10 && main.myBukkit.allowContinue(null, local, null)) {
+                int currentChunkEntities = local.getChunk().getEntities().length;
+
+                if (currentChunkEntities > main.maxChunkEntities + 3 && currentChunkEntities < main.totalMaxChunkEntities) {
+                    if (currentChunkEntities < 20) {
+                        main.maxChunkEntities = currentChunkEntities;
+                    } else {
+                        main.maxChunkEntities = main.maxChunkEntities + 3; //slower growth
+                    }
+                    changed = true;
                 }
-                changed = true;
             }
 
             if (changed)
@@ -216,11 +229,13 @@ public class TpsCheck implements Listener {
                 main.maxEntities = main.maxEntities - 1;
             }
 
-            if (main.maxChunkEntities > 60) {
-                main.maxChunkEntities = main.maxChunkEntities - 3;
-                changed = true;
-            } else {
-                main.maxChunkEntities = main.maxChunkEntities - 1;
+            if (main.maxChunkEntities > 10) {
+                if (main.maxChunkEntities > 60) {
+                    main.maxChunkEntities = main.maxChunkEntities - 3;
+                    changed = true;
+                } else {
+                    main.maxChunkEntities = main.maxChunkEntities - 1;
+                }
             }
 
             if (changed)
@@ -228,7 +243,7 @@ public class TpsCheck implements Listener {
 
         } else {
 
-            if (lagDuration > 2) {
+            if (main.maxChunkEntities > 10 && lagDuration > 2) {
                 main.maxLiving = main.maxLiving - 10;
                 main.maxEntities = main.maxEntities - 10;
                 main.maxChunkEntities = main.maxChunkEntities - 5;
@@ -307,7 +322,7 @@ public class TpsCheck implements Listener {
 
             for (Entity entity : world.getEntities()) {
 
-                if (main.serverVersion == 8 && !isOwnedByCurrentRegion(entity.getLocation())) {
+                if (main.serverVersion == 8 && !main.myBukkit.allowContinue(entity, null, null)) {
                     continue;
                 }
 
@@ -315,7 +330,7 @@ public class TpsCheck implements Listener {
                     Item item = (Item) entity;
 
                     if (item.getTicksLived() > 3000 && item.getItemStack().getEnchantments().size() == 0) {
-                        main.getLogger().info("ticks: " + item.getTicksLived() + " type: " + item.getName() + " in world: " + world.getName() + " amount: " + item.getItemStack().getAmount());
+                        main.getLogger().info("ticks droped: " + item.getTicksLived() + " type: " + item.getName() + " in world: " + world.getName() + " amount: " + item.getItemStack().getAmount());
 
                         counter = counter + item.getItemStack().getAmount();
                         item.remove();
@@ -415,13 +430,14 @@ public class TpsCheck implements Listener {
     public void sendActionBar(Player player) {
         long global = -1;
         String x;
-        if (main.chunkWater.get(global) == null) {
+
+        if (main.chunkWater.get(global) == null || main.chunkWater.get(global) < 300) {
             x = "";
         } else {
             x = " Water count: " + main.chunkWater.get(global) + " " + (main.chunkWater.size() - 1) + " chunks";
         }
 
-        String message = ChatColor.GREEN + "Last: " + lastTPS() + "  " + getCountRegions() + " regions  CurAvg: " + Math.round(average1) + "  PrevAvg: " + Math.round(average2) + x;
+        String message = ChatColor.GREEN + "Last: " + lastTPS() + "  " + getCountRegions() + " regions  CurAvg: " + Math.round(average1) + "  PrevAvg: " + Math.round(average2) + x + "  " + main.alert;
         player.sendActionBar(message);
     }
 
@@ -528,8 +544,8 @@ public class TpsCheck implements Listener {
 
         if (main.serverVersion == 2 || main.serverVersion == 3) {
             playerCount = Bukkit.getOnlinePlayers().size();
-        }     else {
-            playerCount= player.getWorld().getPlayerCount();
+        } else {
+            playerCount = player.getWorld().getPlayerCount();
         }
 
         Maps = board.getTeam("Lagmeter2");

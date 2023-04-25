@@ -1,15 +1,17 @@
 package me.tontito.coolprotection;
 
+import me.tontito.coolprotection.Updater.UpdateChecker;
+import me.tontito.coolprotection.Updater.UpdateCheckerBukkSpig;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.GameRule;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.plugin.java.JavaPlugin;
 
-import static org.bukkit.entity.SpawnCategory.MONSTER;
-
 import java.io.File;
 import java.util.Hashtable;
+
+import static org.bukkit.entity.SpawnCategory.MONSTER;
 
 public class Main extends JavaPlugin {
 
@@ -24,7 +26,7 @@ public class Main extends JavaPlugin {
     protected float maxSpeed = 0;
     protected int tpsLevel = 0; //0 = normal, 1 = alert, 2 = very low
     protected String serverStatus = null;
-    protected int serverVersion = 0;
+    public int serverVersion = 0;
 
     private boolean autoShutdown = false;
     private int autoShutDownTime = 0;
@@ -44,8 +46,8 @@ public class Main extends JavaPlugin {
     protected String DEFAULT_RESOURCE;
     protected String DEFAULT_RESOURCE_HASH;
     public Hashtable playerControl = new Hashtable();
-
     public Hashtable<Long, Integer> chunkWater = new Hashtable();
+    public MyBukkit myBukkit;
 
     public void onEnable() {
         String version = Bukkit.getVersion().toUpperCase();
@@ -66,6 +68,7 @@ public class Main extends JavaPlugin {
             serverVersion = 7;
         } else if (version.contains("-FOLIA-")) {
             serverVersion = 8;
+
         } else {
             getLogger().info(ChatColor.RED + "Server type not supported or tested! " + version);
             getServer().getPluginManager().disablePlugin(this);
@@ -77,6 +80,8 @@ public class Main extends JavaPlugin {
         } else {
             new UpdateChecker(this);
         }
+
+        myBukkit = new MyBukkit(this, serverVersion);
 
         Utils.SetMain(this);
         setupConfig();
@@ -214,12 +219,18 @@ public class Main extends JavaPlugin {
         if (totalMaxChunkEntities != getServer().getWorld("world").getSpawnLimit(MONSTER)) {
             int tmpChuck = totalMaxChunkEntities;
 
-            if (totalMaxChunkEntities < 50 || totalMaxChunkEntities > 200)
+            if (totalMaxChunkEntities < 10 || totalMaxChunkEntities > 200)
                 tmpChuck = 70; //game defaults 70 from bukkit.yml
 
             getLogger().info("SpawnLimit value changed from " + getServer().getWorld("world").getSpawnLimit(MONSTER) + " to " + tmpChuck);
-            getServer().getWorld("world").setSpawnLimit(MONSTER, tmpChuck);
-            getServer().getWorld("world").setGameRule(GameRule.MAX_ENTITY_CRAMMING, 24); //to fix previous mistake
+
+            if (serverVersion != 8) {
+                getServer().getWorld("world").setSpawnLimit(MONSTER, tmpChuck);
+                getServer().getWorld("world").setGameRule(GameRule.MAX_ENTITY_CRAMMING, 24); //to fix previous mistake
+            } else {
+                final int chunckLimit = tmpChuck;
+                this.myBukkit.Run(null, () -> this.setWorldConfigs(chunckLimit), 20);
+            }
         }
 
         try {
@@ -227,6 +238,12 @@ public class Main extends JavaPlugin {
         } catch (Exception e) {
             tpsProtection = false;
         }
+    }
+
+
+    protected void setWorldConfigs(int tmpChuck) {
+        getServer().getWorld("world").setSpawnLimit(MONSTER, tmpChuck);
+        getServer().getWorld("world").setGameRule(GameRule.MAX_ENTITY_CRAMMING, 24); //to fix previous mistake
     }
 
 

@@ -1,5 +1,7 @@
-package me.tontito.coolprotection;
+package me.tontito.coolprotection.Updater;
 
+import me.tontito.coolprotection.Main;
+import me.tontito.coolprotection.Utils;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.TextComponent;
 import net.kyori.adventure.text.format.NamedTextColor;
@@ -27,7 +29,6 @@ public class UpdateChecker extends BukkitRunnable {
         } else {
             runTaskLaterAsynchronously(main, 20);
         }
-
     }
 
     public void run() {
