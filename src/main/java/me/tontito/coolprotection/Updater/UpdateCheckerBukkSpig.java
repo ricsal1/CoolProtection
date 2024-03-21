@@ -3,6 +3,7 @@ package me.tontito.coolprotection.Updater;
 import me.tontito.coolprotection.Main;
 import me.tontito.coolprotection.Utils;
 import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
 import org.bukkit.scheduler.BukkitRunnable;
 
 import java.io.BufferedReader;
@@ -40,7 +41,7 @@ public class UpdateCheckerBukkSpig extends BukkitRunnable {
                 promptUpdate(version, url);
             }
         } catch (Exception e) {
-            Bukkit.getLogger().info("[" + projectName + "] Connection exception: " + e.getMessage());
+            Bukkit.getConsoleSender().sendMessage("[" + projectName + "]" + ChatColor.RED + " Connection exception: " + e.getMessage());
         }
     }
 
@@ -62,7 +63,7 @@ public class UpdateCheckerBukkSpig extends BukkitRunnable {
     private void promptUpdate(String serverVersion, String Url) {
 
         if (serverVersion == null) {
-            Bukkit.getLogger().info("[" + projectName + "] Unknown error checking version");
+            Bukkit.getConsoleSender().sendMessage("[" + projectName + "]" + ChatColor.RED + " Unknown error checking version");
             return;
         }
 
@@ -75,15 +76,15 @@ public class UpdateCheckerBukkSpig extends BukkitRunnable {
         int versionStatus = Utils.checkGreater(serverVersion, currentVersion);
 
         if (versionStatus == -1) {
-            Bukkit.getLogger().info("[" + projectName + "] THERE IS A NEW UPDATE AVAILABLE Version: " + serverVersion +
+            Bukkit.getConsoleSender().sendMessage("[" + projectName + "]" + ChatColor.GREEN + " THERE IS A NEW UPDATE AVAILABLE Version: " + serverVersion +
                     " Download it from here: https://dev.bukkit.org" + Url);
 
         } else if (versionStatus == 0) {
-            Bukkit.getLogger().info("[" + projectName + "] You have the latest released version");
+            Bukkit.getConsoleSender().sendMessage("[" + projectName + "]" + ChatColor.DARK_GREEN + " You have the latest released version");
         } else if (versionStatus == 1) {
-            Bukkit.getLogger().info("[" + projectName + "] Congrats, you are testing a new version!");
+            Bukkit.getConsoleSender().sendMessage("[" + projectName + "]" + ChatColor.YELLOW + " Congrats, you are testing a new version!");
         } else {
-            Bukkit.getLogger().info("[" + projectName + "] Unknown error checking version (" + versionStatus + ")" + serverVersion + "   " + currentVersion);
+            Bukkit.getConsoleSender().sendMessage("[" + projectName + "]" + ChatColor.RED + " Unknown error checking version (" + versionStatus + ")" + serverVersion + "   " + currentVersion);
         }
 
     }

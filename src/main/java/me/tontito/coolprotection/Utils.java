@@ -9,15 +9,15 @@ import java.time.format.DateTimeFormatter;
 
 
 public class Utils {
-   private static Main main;
+    private static Main main;
 
     public static void SetMain(Main mymain) {
-     main = mymain;
+        main = mymain;
     }
 
 
     public static void logToFile(String name, String message) {
-        logToFile(name,message,true,true);
+        logToFile(name, message, true, true);
     }
 
 

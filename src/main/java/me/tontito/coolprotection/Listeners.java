@@ -1,6 +1,6 @@
 package me.tontito.coolprotection;
 
-import org.apache.commons.lang.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.bukkit.*;
 import org.bukkit.block.Block;
 import org.bukkit.block.BlockFace;
@@ -44,7 +44,7 @@ public class Listeners implements Listener {
             PlayerStatus p = new PlayerStatus();
             p.speed = player.getWalkSpeed();
 
-            main.playerControl.put(player, p);
+            main.playerControl.put(player.getUniqueId().toString(), p);
         }
     }
 
@@ -52,12 +52,19 @@ public class Listeners implements Listener {
     @EventHandler
     public void onPlayerCommandPreprocess(PlayerCommandPreprocessEvent event) {
 
+        PlayerStatus pls = main.playerControl.get(event.getPlayer().getUniqueId().toString());
+
+        if (pls.kick > 2) {
+            event.setCancelled(true);
+            return;
+        }
+
         if (AntigriefProtection && event.getMessage().startsWith("/fill") && event.getMessage().toUpperCase().contains("TNT")) {
 
-            if (main.playerControl.get(event.getPlayer()) != null) {
+            if (main.playerControl.get(event.getPlayer().getUniqueId().toString()) != null) {
                 Player player = event.getPlayer();
 
-                PlayerStatus play = (PlayerStatus) main.playerControl.get(player);
+                PlayerStatus play = main.playerControl.get(player.getUniqueId().toString());
                 play.speed = play.speed - 0.02f;
 
                 player.setWalkSpeed(play.speed);
@@ -69,10 +76,10 @@ public class Listeners implements Listener {
 
         if ((main.hackProtection || AntigriefProtection) && event.getMessage().startsWith("/execute as ")) {
 
-            if (main.playerControl.get(event.getPlayer()) != null) {
+            if (main.playerControl.get(event.getPlayer().getUniqueId().toString()) != null) {
                 Player player = event.getPlayer();
 
-                PlayerStatus play = (PlayerStatus) main.playerControl.get(player);
+                PlayerStatus play = main.playerControl.get(player.getUniqueId().toString());
                 play.speed = play.speed - 0.02f;
 
                 player.setWalkSpeed(play.speed);
@@ -88,6 +95,12 @@ public class Listeners implements Listener {
     public void onPlayerChat(@NotNull AsyncPlayerChatEvent chat) {
 
         Player player = chat.getPlayer();
+        PlayerStatus pls = main.playerControl.get(player.getUniqueId().toString());
+
+        if (pls.kick > 2) {
+            return;
+        }
+
         String message = chat.getMessage().toLowerCase();
 
         if (message.equalsIgnoreCase("!lagmeter on") && player.isOp()) {
@@ -114,7 +127,7 @@ public class Listeners implements Listener {
                         valor = "70"; //game defaults 70 from bukkit.yml
 
                     final int chunckLimit = Integer.parseInt(valor);
-                    main.myBukkit.Run(null, () -> main.setWorldConfigs(chunckLimit), 0);
+                    main.myBukkit.runTask(null,null,null, () -> main.setWorldConfigs(chunckLimit));
 
                     chat.setCancelled(true);
                 }
@@ -152,6 +165,16 @@ public class Listeners implements Listener {
                 player.sendRawMessage(("Current values are TPS: " + tps.lastTPS() + " Optimal Max LivingEntities: " + main.maxLiving + "  maxEntities: " + main.maxEntities + "  maxChunkEntities: " + main.maxChunkEntities));
                 chat.setCancelled(true);
             }
+        } else if (message.equalsIgnoreCase("!emergency") && player.isOp()) {
+            main.tpsProtection = true;
+            AntigriefProtection = true;
+            main.speedProtection = true;
+            main.hackProtection = true;
+            main.ExplodeProtection = true;
+            main.WitherProtection = true;
+            player.sendRawMessage("Enabled emergency mode, all protections temporarily on!");
+            tps.registerScoreBoards(chat.getPlayer());
+            chat.setCancelled(true);
         }
     }
 
@@ -163,7 +186,15 @@ public class Listeners implements Listener {
 
         e.setCancelled(true);
         Player player = e.getPlayer();
-        String message = "<" + player.getName() + "> " + e.getMessage();
+
+        PlayerStatus pls = main.playerControl.get(player.getUniqueId().toString());
+        ChatColor extra = ChatColor.RED;
+
+        if (pls.kick > 2) {
+            extra = ChatColor.RED;
+        }
+
+        String message = "<" + extra + player.getName() + ChatColor.BLACK + "> " + e.getMessage();
 
         Iterator var8 = Bukkit.getOnlinePlayers().iterator();
 
@@ -179,11 +210,11 @@ public class Listeners implements Listener {
 
         Player player = event.getPlayer();
 
-        if (main.playerControl.get(player) == null) {
+        if (main.playerControl.get(player.getUniqueId().toString()) == null) {
             PlayerStatus p = new PlayerStatus();
             p.speed = player.getWalkSpeed();
 
-            main.playerControl.put(player, p);
+            main.playerControl.put(player.getUniqueId().toString(), p);
         }
 
         if (!main.DEFAULT_RESOURCE.equals("")) {
@@ -238,7 +269,7 @@ public class Listeners implements Listener {
 
         Location location = event.getLocation();
 
-        if (main.serverVersion == 8 && !main.myBukkit.allowContinue(null, location, null)) return;
+        if (main.serverVersion == 8 && !main.myBukkit.isOwnedby(null, location, null)) return;
 
         if (main.tpsProtection) {
             int mytps = tps.lastTPS();
@@ -263,10 +294,10 @@ public class Listeners implements Listener {
 
             Entity causer = ((TNTPrimed) event.getEntity()).getSource();
 
-            if (causer instanceof Player && main.playerControl.get(causer) != null) {
+            if (causer instanceof Player && main.playerControl.get(causer.getUniqueId().toString()) != null) {
                 Player player = ((Player) causer);
 
-                PlayerStatus play = (PlayerStatus) main.playerControl.get(player);
+                PlayerStatus play = main.playerControl.get(player.getUniqueId().toString());
                 play.speed = play.speed - 0.02f;
 
                 player.setWalkSpeed(play.speed);
@@ -298,7 +329,7 @@ public class Listeners implements Listener {
 
         Location location = event.getLightning().getLocation();
 
-        if (main.serverVersion == 8 && !main.myBukkit.allowContinue(null, location, null)) return;
+        if (main.serverVersion == 8 && !main.myBukkit.isOwnedby(null, location, null)) return;
 
         int mytps = tps.lastTPS();
 
@@ -335,7 +366,7 @@ public class Listeners implements Listener {
         EntityType entidade = event.getEntityType();
         Location location = event.getLocation();
 
-        if (main.serverVersion == 8 && !main.myBukkit.allowContinue(null, location, null)) return;
+        if (main.serverVersion == 8 && !main.myBukkit.isOwnedby(null, location, null)) return;
 
         World world = location.getWorld();
         World.Environment mundo = world.getEnvironment();
@@ -484,7 +515,7 @@ public class Listeners implements Listener {
 
         Location location = event.getLocation();
 
-        if (main.serverVersion == 8 && !main.myBukkit.allowContinue(null, location, null)) return;
+        if (main.serverVersion == 8 && !main.myBukkit.isOwnedby(null, location, null)) return;
 
         World world = location.getWorld();
 
@@ -513,7 +544,7 @@ public class Listeners implements Listener {
 
         Entity entidade = event.getEntity();
 
-        if (main.serverVersion == 8 && !main.myBukkit.allowContinue(entidade, null, null)) return;
+        if (main.serverVersion == 8 && !main.myBukkit.isOwnedby(entidade, null, null)) return;
 
         if (entidade.getType().isAlive()) {
             return;
@@ -582,7 +613,7 @@ public class Listeners implements Listener {
 
         Location location = event.getEntity().getLocation();
 
-        if (main.serverVersion == 8 && !main.myBukkit.allowContinue(null, location, null)) return;
+        if (main.serverVersion == 8 && !main.myBukkit.isOwnedby(null, location, null)) return;
 
         int mytps = tps.lastTPS();
         int counter = 0;
@@ -608,6 +639,14 @@ public class Listeners implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onProcessBlockBreakEvent(BlockBreakEvent e) {
+
+        PlayerStatus pls = main.playerControl.get(e.getPlayer().getUniqueId().toString());
+
+        if (pls.kick > 2) {
+            e.setCancelled(true);
+            return;
+        }
+
         if (!AntigriefProtection || e.getPlayer().isOp()) return;
         e.setCancelled(true);
     }
@@ -615,6 +654,14 @@ public class Listeners implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onBlockPlaceEvent(BlockPlaceEvent e) {
+
+        PlayerStatus pls = main.playerControl.get(e.getPlayer().getUniqueId().toString());
+
+        if (pls.kick > 2) {
+            e.setCancelled(true);
+            return;
+        }
+
         if (!AntigriefProtection || e.getPlayer().isOp()) return;
         e.setCancelled(true);
     }
@@ -635,7 +682,7 @@ public class Listeners implements Listener {
         if (main.hackProtection) {
             Block block = player.getLocation().getBlock().getRelative(BlockFace.DOWN);
             Block block2 = player.getLocation().getBlock();
-            PlayerStatus p = (PlayerStatus) main.playerControl.get(player);
+            PlayerStatus p = main.playerControl.get(player.getUniqueId().toString());
 
             if (!player.isSneaking() && !player.isFlying() && !player.isGliding() && !(player.getVehicle() instanceof Horse) && block.getType().equals(Material.AIR) && !player.hasPotionEffect(PotionEffectType.LEVITATION)) { //jumping
 
@@ -705,8 +752,12 @@ public class Listeners implements Listener {
                         player.kickPlayer("You are been warned " + player.getName() + " don't hack!");
                     }
 
-                    if (p.kick == 4) {
-                        player.banPlayer("Hacking in server");
+                    if (p.kick == 8) {
+                        player.kickPlayer("Last warning " + player.getName() + "!");
+                    }
+
+                    if (p.kick == 10) {
+                        player.banPlayer("You have been warned " + player.getName() + ", goodbye!");
                     }
 
                     return;
@@ -781,6 +832,13 @@ public class Listeners implements Listener {
     @EventHandler(ignoreCancelled = true)
     public void onThrow(PlayerInteractEvent event) {
 
+        PlayerStatus pls = main.playerControl.get(event.getPlayer().getUniqueId().toString());
+
+        if (pls.kick > 2) {
+            event.setCancelled(true);
+            return;
+        }
+
         if (!main.tpsProtection) return;
 
         int mytps = tps.lastTPS();
@@ -794,6 +852,28 @@ public class Listeners implements Listener {
             if (it.getType() == Material.SPLASH_POTION) {
                 main.alert = "Blocked thrown splash potion";
                 event.setCancelled(true);
+            }
+        }
+
+    }
+
+
+    @EventHandler(ignoreCancelled = true)
+    public void onFlintAndSteel(PlayerInteractEvent event) {
+
+        Action action = event.getAction();
+        Player player = event.getPlayer();
+
+        PlayerStatus pls = main.playerControl.get(player.getUniqueId().toString());
+
+        if (action == Action.RIGHT_CLICK_BLOCK  && event.getItem() != null && event.getItem().getType() == Material.FLINT_AND_STEEL) {
+            if (pls.kick > 0) {
+                main.alert = "Blocked flintAndSteel fire";
+                Utils.logToFile("Protection Manager", player.getName() + " was flint and steel blocked");
+                event.setCancelled(true);
+            } else {
+//               PlayerStatus.Sus sus = new PlayerStatus.Sus();
+//               pls.suspicious.
             }
         }
     }
@@ -855,7 +935,157 @@ public class Listeners implements Listener {
 
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-    public void onBlockPhysics(BlockPhysicsEvent event) {
+    public void onBlockPhysicsv2(BlockPhysicsEvent event) {
+
+        if (!main.tpsProtection) return;
+
+        if (main.serverVersion == 2 || main.serverVersion == 3) return;
+
+        long global = -1;
+        Long testGlobal = main.chunkWater.get(global);
+
+        if (testGlobal == null) {
+            main.chunkWater.put(global, (long) 1);
+        } else {
+            main.chunkWater.replace(global, (testGlobal + 1));
+        }
+
+        long time = -4;
+        Long testtime = main.chunkWater.get(time);
+
+        //only 5ms to process these events
+        if (testtime != null && testtime > 5000000) {
+            long overtime = -5;
+            Long testproce = main.chunkWater.get(overtime);
+
+            if (testproce == null) {
+                main.chunkWater.put(overtime, (long) 1);
+            } else {
+                main.chunkWater.replace(overtime, (testproce + 1));
+            }
+
+            return;
+        }
+
+        Block block = event.getBlock();
+
+        if (block.getType() == Material.WATER) {
+            long mytime = System.nanoTime();
+
+            synchronized (this) {
+
+                long chunk = block.getChunk().getChunkKey();
+
+                Long testChunk = main.chunkWater.get(chunk);
+
+                if (testChunk == null) {
+                    testChunk = (long) 1;
+                    main.chunkWater.put(chunk, (long) 1);
+                } else {
+                    main.chunkWater.replace(chunk, (testChunk + 1));
+                }
+
+                long filter = -2;
+
+                if (!registerBlock(block)) {
+                    //if already existed, filters and inc the filter counter
+                    Long testfilter = main.chunkWater.get(filter);
+
+                    if (testfilter == null) {
+                        main.chunkWater.put(filter, (long) 1);
+                    } else {
+                        main.chunkWater.replace(filter, (testfilter + 1));
+                    }
+                    return;
+                }
+
+                //limit of 200 for each chunk
+                if (testChunk > 50) {
+
+                    long processed = -3;
+                    Long testproce = main.chunkWater.get(processed);
+
+                    if (testproce == null) {
+                        main.chunkWater.put(processed, (long) 1);
+                    } else {
+                        main.chunkWater.replace(processed, (testproce + 1));
+                    }
+
+                    Location loc = block.getLocation();
+                    int jumpy = 0;
+
+                    for (int i = 1; i < 350; i++) {
+                        if (jumpy > 4) {
+
+                            testtime = main.chunkWater.get(time);
+
+                            if (testtime == null) {
+                                main.chunkWater.put(time, (System.nanoTime() - mytime));
+                            } else {
+                                main.chunkWater.replace(time, (testtime + (System.nanoTime() - mytime)));
+                            }
+
+                            return;
+                        }
+
+                        Location newLoc = loc.add(0, 1, 0); //incrementa 1 ao existente em loop
+                         block = newLoc.getBlock();
+
+//                        if (block.getX() == 2504 && block.getZ() == -4011)
+//                            System.out.println(i + "     " + block.getType() + "     " + block.getX() + ":" + block.getY() + ":" + block.getZ());
+
+                        if (registerBlock(block) && block.getType() == Material.WATER) {
+
+                            int level = ((Levelled) block.getBlockData()).getLevel();
+
+                            if (level == 0) {
+                                block.setType(Material.AIR);
+
+                                testtime = main.chunkWater.get(time);
+
+                                if (testtime == null) {
+                                    main.chunkWater.put(time, (System.nanoTime() - mytime));
+                                } else {
+                                    main.chunkWater.replace(time, (testtime + (System.nanoTime() - mytime)));
+                                }
+
+                                return; //game over mf
+                            }
+                            if (level == 8) {
+                                block.setType(Material.AIR);
+                            }
+
+                            jumpy = 0;
+                        } else
+                            jumpy++;
+                    }
+                }
+
+            }
+        }
+    }
+
+
+    private boolean registerBlock(Block block) {
+        long KeyCoord = Math.abs((10000 * block.getX())) + Math.abs((100 * block.getY())) + Math.abs(block.getZ());
+
+//        if (block.getX() == 2504 && block.getZ() == -4011)
+//            System.out.println(block.getX() + ":" + block.getY() + ":" + block.getZ());
+
+        Long testCoord = main.chunkWater.get(KeyCoord);
+
+        if (testCoord != null) {
+            return false;
+
+        } else {
+            main.chunkWater.put(KeyCoord, (long) 1);
+            return true;
+        }
+    }
+
+
+    //@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onBlockPhysicsv1(BlockPhysicsEvent event) {
 
         if (!main.tpsProtection) return;
 
@@ -864,14 +1094,17 @@ public class Listeners implements Listener {
         Block block = event.getBlock();
 
         if (block.getType() == Material.WATER) {
+            long mytime = System.nanoTime();
+
+
             Long chunk = block.getChunk().getChunkKey();
 
             synchronized (this) {
                 long global = -1;
-                Integer test = main.chunkWater.get(global);
+                Long test = main.chunkWater.get(global);
 
                 if (test == null) {
-                    main.chunkWater.put(global, 1);
+                    main.chunkWater.put(global, (long) 1);
                 } else {
                     main.chunkWater.replace(global, (test + 1));
                 }
@@ -879,12 +1112,21 @@ public class Listeners implements Listener {
                 test = main.chunkWater.get(chunk);
 
                 if (test == null) {
-                    main.chunkWater.put(chunk, 1);
+                    main.chunkWater.put(chunk, (long) 1);
                 } else {
                     main.chunkWater.replace(chunk, (test + 1));
                 }
 
                 if (main.chunkWater.get(chunk) > 400) { //limit of 400 for each chunk
+
+                    long processed = -3;
+                    Long testproce = main.chunkWater.get(processed);
+
+                    if (testproce == null) {
+                        main.chunkWater.put(processed, (long) 1);
+                    } else {
+                        main.chunkWater.replace(processed, (testproce + 1));
+                    }
 
                     Location loc = block.getLocation();
 
@@ -895,6 +1137,16 @@ public class Listeners implements Listener {
 
                     for (int i = 1; i < 350; i++) {
                         if (jumpy > 10) {
+
+                            long time = -4;
+                            Long testtime = main.chunkWater.get(time);
+
+                            if (testtime == null) {
+                                main.chunkWater.put(time, (System.nanoTime() - mytime));
+                            } else {
+                                main.chunkWater.replace(time, (testtime + (System.nanoTime() - mytime)));
+                            }
+
                             break;
                         }
 
@@ -908,6 +1160,16 @@ public class Listeners implements Listener {
                             block.setType(Material.AIR);
 
                             if (level == 0) {
+
+                                long time = -4;
+                                Long testtime = main.chunkWater.get(time);
+
+                                if (testtime == null) {
+                                    main.chunkWater.put(time, (System.nanoTime() - mytime));
+                                } else {
+                                    main.chunkWater.replace(time, (testtime + (System.nanoTime() - mytime)));
+                                }
+
                                 return; //game over mf
                             }
 

@@ -16,6 +16,7 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Enumeration;
 import java.util.Hashtable;
+import java.util.concurrent.atomic.AtomicInteger;
 
 
 public class TpsCheck implements Listener {
@@ -42,6 +43,10 @@ public class TpsCheck implements Listener {
     private int lagDuration = 0;
     private String lastAlert = "";
     private int lastAlertCounter = 0;
+
+    private long tickNumber = 0;
+    private long lastTick = 0;
+    private int maxRegions = 0;
 
 
     public TpsCheck(@NotNull Main main, boolean AutoShut, int shutCounterTime, int autoShutdownTime) {
@@ -81,6 +86,9 @@ public class TpsCheck implements Listener {
 
     @EventHandler
     public void onTickEnd(@NotNull ServerTickEndEvent event) {
+        tickNumber = event.getTickNumber();
+        if (tickNumber == (lastTick + 5)) maxRegions = maxRegions + 1;
+
         updateTps(event.getTimeRemaining());
     }
 
@@ -97,13 +105,16 @@ public class TpsCheck implements Listener {
             countTicks++;
 
             if (currSecond != seconds) {
+                lastTick = tickNumber;
                 //updates last second
-                if (main.serverVersion == 8) {
-                    regions[currSecond] = (int) Math.floor((countTicks / 20));
+                if (main.myBukkit.isFolia()) {
+                    regions[currSecond] = maxRegions;
 
                     if (regions[currSecond] > 0) {
                         tps[currSecond] = tps[currSecond] / regions[currSecond];
                     }
+
+                    maxRegions = 0;
 
                     if (currSecond == 59) {
                         for (int i = 0; i < 57; i++) {
@@ -134,14 +145,19 @@ public class TpsCheck implements Listener {
                     }
                 } else tps[seconds + 1] = 0;
 
-                if (main.tpsProtection) adjustRuntimeSettings(date, lastTPS());
+                if (main.tpsProtection)  adjustRuntimeSettings(date, lastTPS());
+
                 if (autoShutdown) checkTurnOff(date);
 
                 showLagToPlayers();
 
                 updatePlayerStatus();
 
+                if (main.chunkWater.size() > 0 && main.chunkWater.get((long) -4) != null)
+                    System.out.println("sz: " + main.chunkWater.size() + " te: " + main.chunkWater.get((long) -1) + " fl: " + main.chunkWater.get((long) -2) + " pr: " + main.chunkWater.get((long) -3) + " tt: " + (main.chunkWater.get((long) -4) / 1000000)  + " ot: " + main.chunkWater.get((long) -5));
+
                 main.chunkWater.clear();
+
             }
         }
     }
@@ -164,7 +180,7 @@ public class TpsCheck implements Listener {
         for (Player pls : Bukkit.getOnlinePlayers()) {
             player = pls;
 
-            if (main.serverVersion == 8 && main.myBukkit.allowContinue(player, null, null)) {
+            if (main.myBukkit.isFolia() && main.myBukkit.isOwnedby(player, null, null)) {
                 break;
             }
         }
@@ -172,10 +188,13 @@ public class TpsCheck implements Listener {
         if (player == null) return;
 
         World world = player.getWorld();
-        int currentLiving = world.getLivingEntities().size();
-        int currentEntities = world.getEntities().size();
-
         Location local = player.getLocation();
+
+        AtomicInteger currentLiving = new AtomicInteger();// = world.getLivingEntities().size();
+        main.myBukkit.runTask(null,local,null, () -> currentLiving.set(world.getEntities().size()));
+
+        AtomicInteger currentEntities = new AtomicInteger(); //= world.getEntities().size();
+        main.myBukkit.runTask(null,local,null, () -> currentEntities.set(world.getEntities().size()));
 
         if (mytps >= 18) {
             main.tpsLevel = 0;
@@ -183,17 +202,17 @@ public class TpsCheck implements Listener {
 
             boolean changed = false;
 
-            if (currentLiving > main.maxLiving + 6) {
-                main.maxLiving = currentLiving;
+            if (currentLiving.get() > main.maxLiving + 6) {
+                main.maxLiving = currentLiving.get();
                 changed = true;
             }
 
-            if (currentEntities > main.maxEntities + 6) {
-                main.maxEntities = currentEntities;
+            if (currentEntities.get() > main.maxEntities + 6) {
+                main.maxEntities = currentEntities.get();
                 changed = true;
             }
 
-            if (main.maxChunkEntities > 10 && main.myBukkit.allowContinue(null, local, null)) {
+            if (main.maxChunkEntities > 10 && main.myBukkit.isOwnedby(null, local, null)) {
                 int currentChunkEntities = local.getChunk().getEntities().length;
 
                 if (currentChunkEntities > main.maxChunkEntities + 3 && currentChunkEntities < main.totalMaxChunkEntities) {
@@ -253,7 +272,8 @@ public class TpsCheck implements Listener {
             }
             lagDuration++;
 
-            emergencyClean(date);
+           // emergencyClean(date);
+           // main.myBukkit.run(null, () -> emergencyClean(date), main);
         }
     }
 
@@ -322,7 +342,7 @@ public class TpsCheck implements Listener {
 
             for (Entity entity : world.getEntities()) {
 
-                if (main.serverVersion == 8 && !main.myBukkit.allowContinue(entity, null, null)) {
+                if (main.myBukkit.isFolia() && !main.myBukkit.isOwnedby(entity, null, null)) {
                     continue;
                 }
 
@@ -337,6 +357,7 @@ public class TpsCheck implements Listener {
                     }
                 }
             }
+
         }
 
         if (counter > 0) {
@@ -385,7 +406,7 @@ public class TpsCheck implements Listener {
             } else if (playersWithScoreboard.get(player).equals("0")) {
                 playersWithScoreboard.remove(player);
 
-                if (main.serverVersion == 8) {
+                if (main.myBukkit.isFolia()) {
                     continue;
                 }
 
@@ -404,24 +425,22 @@ public class TpsCheck implements Listener {
 
         if (main.playerControl == null || main.playerControl.size() == 0) return;
 
-        Enumeration<Player> e = main.playerControl.keys();
+        for (Player player : Bukkit.getOnlinePlayers()) {
+            PlayerStatus p = main.playerControl.get(player.getUniqueId().toString());
 
-        while (e.hasMoreElements()) {
-
-            Player player = e.nextElement();
-            PlayerStatus p = (PlayerStatus) main.playerControl.get(player);
-
-            //for players with penalties
-            if (main.hackProtection && p.speed < 0.2) {
-                p.speed = p.speed + 0.02f;
-                player.setWalkSpeed(p.speed);
-            }
-            //for players with wrong speed
-            else if (main.speedProtection && player.getWalkSpeed() > (float) 0.2 && player.getActivePotionEffects().size() == 0) {
-                player.setWalkSpeed((float) 0.2);
-                Utils.logToFile("Protection Manager", player.getName() + " got its walk speed adjusted");
-                main.alert = player.getName() + " got its walk speed reset";
-                //max recommended 0.335
+            if (p != null) {
+                //for players with penalties
+                if (main.hackProtection && p.speed < 0.2) {
+                    p.speed = p.speed + 0.02f;
+                    player.setWalkSpeed(p.speed);
+                }
+                //for players with wrong speed
+                else if (main.speedProtection && player.getWalkSpeed() > (float) 0.2 && player.getActivePotionEffects().size() == 0) {
+                    player.setWalkSpeed((float) 0.2);
+                    Utils.logToFile("Protection Manager", player.getName() + " got its walk speed adjusted");
+                    main.alert = player.getName() + " got its walk speed reset";
+                    //max recommended 0.335
+                }
             }
         }
     }
@@ -442,12 +461,17 @@ public class TpsCheck implements Listener {
     }
 
 
+
     private void setScoreBoard(Player player) {
 
-        if (main.serverVersion == 8) {
-            sendActionBar(player);
-            return;
-        }
+//                if (main.myBukkit.isFolia()) {
+//            dev.danablend.counterstrike.utils.Board.FastBoard board = new dev.danablend.counterstrike.utils.Board.FastBoard(player);
+//            board.updateTitle(ChatColor.BOLD + "----Miner Strike v" + CounterStrike.i.getDescription().getVersion() + "----");
+//            csplayer.setBoard(board);
+//return;
+//        }
+
+
 
         Scoreboard board = Bukkit.getScoreboardManager().getNewScoreboard();
 
@@ -478,21 +502,27 @@ public class TpsCheck implements Listener {
 
         Maps = board.registerNewTeam("Lagmeter3");
         Maps.addEntry(ChatColor.BLUE.toString());
-        Maps.setPrefix(ChatColor.WHITE + "Current Max allowed Entities: ");
+        Maps.setPrefix(ChatColor.WHITE + "Max allowed Entities: ");
         Maps.setSuffix(ChatColor.GREEN + "");
         obj.getScore(ChatColor.BLUE.toString()).setScore(4);
 
         Maps = board.registerNewTeam("Lagmeter4");
         Maps.addEntry(ChatColor.LIGHT_PURPLE.toString());
-        Maps.setPrefix(ChatColor.WHITE + "Alert: ");
+        Maps.setPrefix(ChatColor.WHITE + "Confs: ");
         Maps.setSuffix(ChatColor.GREEN + "");
         obj.getScore(ChatColor.LIGHT_PURPLE.toString()).setScore(3);
 
         Maps = board.registerNewTeam("Lagmeter5");
-        Maps.addEntry(ChatColor.GREEN.toString());
-        Maps.setPrefix(ChatColor.WHITE + "--------------------------------------------------");
+        Maps.addEntry(ChatColor.DARK_PURPLE.toString());
+        Maps.setPrefix(ChatColor.WHITE + "Alert: ");
         Maps.setSuffix(ChatColor.GREEN + "");
-        obj.getScore(ChatColor.GREEN.toString()).setScore(2);
+        obj.getScore(ChatColor.DARK_PURPLE.toString()).setScore(2);
+
+        Maps = board.registerNewTeam("Lagmeter6");
+        Maps.addEntry(ChatColor.DARK_BLUE.toString());
+        Maps.setPrefix(ChatColor.WHITE + "-----------------------------------------------");
+        Maps.setSuffix(ChatColor.GREEN + "");
+        obj.getScore(ChatColor.DARK_BLUE.toString()).setScore(1);
 
         player.setScoreboard(board);
     }
@@ -500,7 +530,7 @@ public class TpsCheck implements Listener {
 
     private void updateScoreBoard(Player player) {
 
-        if (main.serverVersion == 8) {
+        if (main.myBukkit.isFolia()) {
             sendActionBar(player);
             return;
         }
@@ -555,8 +585,242 @@ public class TpsCheck implements Listener {
         Maps.setSuffix(ChatColor.GREEN + "Chk: " + main.maxChunkEntities + "  Ent: " + main.maxEntities + "  Liv: " + main.maxLiving);
 
         Maps = board.getTeam("Lagmeter4");
+        Maps.setSuffix(ChatColor.GREEN + "Shut:" + autoShutdown + "@" + String.format("00",autoShutdownTime) + "h  TpsCrt:" + main.tpsProtection + "  NChatRep:" + main.antiChatReport + "  AntiHack:"+ main.hackProtection);
+
+        Maps = board.getTeam("Lagmeter5");
         Maps.setSuffix(ChatColor.GREEN + "" + main.alert);
     }
+
+
+
+
+
+//    public void setScoreBoard(CSPlayer csplayer) {
+//        Player player = csplayer.getPlayer();
+//
+//        if (!player.isOnline()) return;
+//
+//        //inits player colour
+//        player.setPlayerListName(ChatColor.valueOf(csplayer.getColour()) + player.getName());
+//
+//        if (isFolia) {
+//            dev.danablend.counterstrike.utils.Board.FastBoard board = new dev.danablend.counterstrike.utils.Board.FastBoard(player);
+//            board.updateTitle(ChatColor.BOLD + "----Miner Strike v" + CounterStrike.i.getDescription().getVersion() + "----");
+//            csplayer.setBoard(board);
+//
+//        } else {
+//            //CSPlayer csplayer = CounterStrike.i.getCSPlayer(player, false, null);
+//
+//            Scoreboard board = Bukkit.getScoreboardManager().getNewScoreboard();
+//
+//            Objective obj = board.registerNewObjective("counterStrike", "dummy", "counterStrike");
+//            obj.setDisplaySlot(DisplaySlot.SIDEBAR);
+//            obj.setDisplayName(ChatColor.BOLD + "----Miner Strike v" + CounterStrike.i.getDescription().getVersion() + "----");
+//
+//            dev.danablend.counterstrike.csplayer.Team myTeam;
+//
+//            if (csplayer.getTeam().equals(TeamEnum.COUNTER_TERRORISTS)) {
+//                myTeam = CounterStrike.i.getCounterTerroristsTeam();
+//            } else {
+//                myTeam = CounterStrike.i.getTerroristsTeam();
+//            }
+//
+//            // Teams to hide name tags
+//            Team t = board.registerNewTeam("t");
+//            Team ct = board.registerNewTeam("ct");
+//            t.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.FOR_OWN_TEAM);
+//            ct.setOption(Team.Option.NAME_TAG_VISIBILITY, Team.OptionStatus.FOR_OWN_TEAM);
+//
+//            for (CSPlayer p : CounterStrike.i.getTerroristsTeam().getCsPlayers()) {
+//                t.addEntry(p.getPlayer().getName());
+//            }
+//            for (CSPlayer p : CounterStrike.i.getCounterTerroristsTeam().getCsPlayers()) {
+//                ct.addEntry(p.getPlayer().getName());
+//            }
+//
+//            // Display the round Map
+//            Team Maps = board.registerNewTeam("MapsRound");
+//            Maps.addEntry(ChatColor.GRAY.toString());
+//            Maps.setPrefix(ChatColor.LIGHT_PURPLE + "Map: ");
+//            Maps.setSuffix(ChatColor.GREEN + "");
+//            obj.getScore(ChatColor.GRAY.toString()).setScore(18);
+//
+//            Team roundTeams = board.registerNewTeam("Teams");
+//            roundTeams.addEntry(ChatColor.RED.toString());
+//            roundTeams.setPrefix(ChatColor.LIGHT_PURPLE + "Teams: ");
+//            roundTeams.setSuffix("");
+//            obj.getScore(ChatColor.RED.toString()).setScore(17);
+//
+//            Integer scoreCounter = 16;
+//
+//            for (CSPlayer csplayer1 : myTeam.getCsPlayers()) {
+//                Team killCounter = board.registerNewTeam("k" + scoreCounter);
+//
+//                killCounter.addEntry(ChatColor.valueOf(csplayer1.getColour()) + csplayer1.getPlayer().getName());
+//                killCounter.setPrefix("");
+//                killCounter.setSuffix(": " + ChatColor.GREEN + "$" + csplayer1.getMoney() + ChatColor.LIGHT_PURPLE + " K: " + ChatColor.GREEN + "" + csplayer1.getKills() + "  " + ChatColor.LIGHT_PURPLE + "D: " + ChatColor.GREEN + "" + csplayer1.getDeaths());
+//                obj.getScore(ChatColor.valueOf(csplayer1.getColour()) + csplayer1.getPlayer().getName()).setScore(scoreCounter);
+//                scoreCounter--;
+//            }
+//
+//            player.setScoreboard(board);
+//        }
+//    }
+//
+//
+//    public void updateScoreBoard(CSPlayer csplayer) {
+//        Player player = csplayer.getPlayer();
+//        //CSPlayer csplayer = CounterStrike.i.getCSPlayer(player, false, null);
+//
+//        if (!player.isOnline()) return;
+//
+//        if (isFolia) {
+//            updateFastScoreBoard(csplayer);
+//        } else {
+//            Scoreboard board = player.getScoreboard();
+//            board.resetScores(player.getName());
+//
+//            dev.danablend.counterstrike.csplayer.Team myTeam;
+//
+//            if (csplayer.getTeam().equals(TeamEnum.COUNTER_TERRORISTS)) {
+//                myTeam = CounterStrike.i.getCounterTerroristsTeam();
+//            } else {
+//                myTeam = CounterStrike.i.getTerroristsTeam();
+//            }
+//
+//            // Display the world
+//            Team Maps = board.getTeam("MapsRound");
+//
+//            if (Maps == null) return;
+//
+//            Maps.setPrefix(ChatColor.LIGHT_PURPLE + "Map: ");
+//            Maps.setSuffix(ChatColor.GREEN + plugin.Map + "  " + ChatColor.LIGHT_PURPLE + "R: " + ChatColor.GREEN + "" + (myTeam.getLosses() + myTeam.getWins() + 1) + " of " + MAX_ROUNDS);
+//
+//
+//            Team roundTeams = board.getTeam("Teams");
+//            roundTeams.setPrefix(ChatColor.LIGHT_PURPLE + "Teams: ");
+//
+//            String TeamA = ChatColor.valueOf(csplayer.getColour()) + "" + csplayer.getColour() + ": ";
+//            String TeamB = ChatColor.valueOf(csplayer.getOpponentColour()) + csplayer.getOpponentColour() + ": ";
+//
+//            String teamString = TeamA + myTeam.getWins() + ChatColor.GRAY + " vs " + TeamB + myTeam.getLosses();
+//            roundTeams.setSuffix(teamString);
+//
+//
+//            Integer scoreCounter = 16;
+//            boolean wasnull;
+//
+//            for (CSPlayer csplayer1 : myTeam.getCsPlayers()) {
+//                Team killCounter = board.getTeam("k" + scoreCounter);
+//                wasnull = false;
+//
+//                if (killCounter == null) {
+//                    wasnull = true;
+//                    killCounter = board.registerNewTeam("k" + scoreCounter);
+//                }
+//                killCounter.addEntry(ChatColor.valueOf(csplayer1.getColour()) + csplayer1.getPlayer().getName());
+//                killCounter.setPrefix("");
+//
+//                Player play = csplayer1.getPlayer();
+//
+//                if (play.isDead()) {
+//                    killCounter.setSuffix(": " + ChatColor.WHITE + ChatColor.UNDERLINE + " DEAD  " + ChatColor.BOLD + "$" + csplayer1.getMoney() + " K: " + "" + csplayer1.getKills() + "  " + "D: " + "" + csplayer1.getDeaths());
+//                } else {
+//                    killCounter.setSuffix(": " + ChatColor.GREEN + "$" + csplayer1.getMoney() + ChatColor.LIGHT_PURPLE + " K:" + ChatColor.GREEN + "" + csplayer1.getKills() + " " + ChatColor.LIGHT_PURPLE + "D:" + ChatColor.GREEN + "" + csplayer1.getDeaths() + " " + ChatColor.LIGHT_PURPLE + "MVP:" + ChatColor.GREEN + "" + csplayer1.getMVP());
+//                }
+//
+//                if (wasnull) {
+//                    Objective obj = board.getObjective("counterStrike");
+//                    obj.getScore(ChatColor.valueOf(csplayer1.getColour()) + csplayer1.getPlayer().getName()).setScore(scoreCounter);
+//                }
+//                scoreCounter--;
+//            }
+//        }
+//    }
+//
+//
+//    public void updateFastScoreBoard(CSPlayer csplayer) {
+//
+//        if (csplayer.returnBoard() == null) return;
+//
+//        dev.danablend.counterstrike.csplayer.Team myTeam;
+//
+//        if (csplayer.getTeam().equals(TeamEnum.COUNTER_TERRORISTS)) {
+//            myTeam = CounterStrike.i.getCounterTerroristsTeam();
+//        } else {
+//            myTeam = CounterStrike.i.getTerroristsTeam();
+//        }
+//
+//        String TeamA = ChatColor.valueOf(csplayer.getColour()) + "" + csplayer.getColour() + ": ";
+//        String TeamB = ChatColor.valueOf(csplayer.getOpponentColour()) + csplayer.getOpponentColour() + ": ";
+//
+//        String[] lines = new String[21];
+//
+//        lines[0] = ChatColor.LIGHT_PURPLE + "Map: " + ChatColor.GREEN + plugin.Map + "  " + ChatColor.LIGHT_PURPLE + "R: " + ChatColor.GREEN + "" + (myTeam.getLosses() + myTeam.getWins() + 1) + " of " + MAX_ROUNDS;
+//        lines[1] = ChatColor.LIGHT_PURPLE + "Teams: " + TeamA + myTeam.getWins() + ChatColor.GRAY + " vs " + TeamB + myTeam.getLosses();
+//
+//        ChatColor c1 = ChatColor.valueOf(plugin.counterTerroristsTeam.getColour());
+//        lines[2] = ChatColor.BOLD + "" + plugin.counterTerrorists.size() + " " + c1 + "Counters" + ChatColor.WHITE + " with " + plugin.counterTerroristsTeam.getWins() + " wins: ";
+//        int linha = 3;
+//
+//        for (CSPlayer csplayer1 : plugin.counterTerrorists) {
+//
+//            Player play = csplayer1.getPlayer();
+//
+//            if (play.isDead()) {
+//                lines[linha] = play.getName() + ": " + ChatColor.WHITE + ChatColor.UNDERLINE + " DEAD  " + ChatColor.BOLD + "$" + csplayer1.getMoney() + " K: " + "" + csplayer1.getKills() + "  " + "D: " + csplayer1.getDeaths();
+//            } else {
+//                lines[linha] = play.getName() + ": " + ChatColor.GREEN + "$" + csplayer1.getMoney() + ChatColor.LIGHT_PURPLE + " K:" + ChatColor.GREEN + "" + csplayer1.getKills() + " " + ChatColor.LIGHT_PURPLE + "D:" + ChatColor.GREEN + csplayer1.getDeaths() + " " + ChatColor.LIGHT_PURPLE + "MVP:" + ChatColor.GREEN + "" + csplayer1.getMVP();
+//            }
+//            linha++;
+//        }
+//
+//        c1 = ChatColor.valueOf(plugin.terroristsTeam.getColour());
+//        lines[linha] = ChatColor.BOLD + "" + plugin.terrorists.size() + " " + c1 + "Terrors" + ChatColor.WHITE + " with " + plugin.terroristsTeam.getWins() + " wins: ";
+//        linha++;
+//
+//        for (CSPlayer csplayer1 : plugin.terrorists) {
+//            Player play = csplayer1.getPlayer();
+//
+//            if (play.isDead()) {
+//                lines[linha] = play.getName() + ": " + ChatColor.WHITE + ChatColor.UNDERLINE + " DEAD  " + ChatColor.BOLD + "$" + csplayer1.getMoney() + " K: " + "" + csplayer1.getKills() + "  " + "D: " + csplayer1.getDeaths();
+//            } else {
+//                lines[linha] = play.getName() + ": " + ChatColor.GREEN + "$" + csplayer1.getMoney() + ChatColor.LIGHT_PURPLE + " K:" + ChatColor.GREEN + "" + csplayer1.getKills() + " " + ChatColor.LIGHT_PURPLE + "D:" + ChatColor.GREEN + csplayer1.getDeaths() + " " + ChatColor.LIGHT_PURPLE + "MVP:" + ChatColor.GREEN + "" + csplayer1.getMVP();
+//            }
+//            linha++;
+//        }
+//
+//        String[] finalFines = new String[linha];
+//
+//        for (int i = 0; i < linha; i++) {
+//            finalFines[i] = lines[i];
+//        }
+//
+//        csplayer.returnBoard().updateLines(finalFines);
+//    }
+//
+//
+//    public void deleteScoreBoards(Player player) {
+//        if (playersWithScoreboard.contains(player.getUniqueId())) {
+//            playersWithScoreboard.remove(player.getUniqueId());
+//
+//            if (isFolia) {
+//                CSPlayer csplayer = CounterStrike.i.getCSPlayer(player, false, null);
+//
+//                if (csplayer == null) {
+//                    return;
+//                }
+//
+//                dev.danablend.counterstrike.utils.Board.FastBoard board = csplayer.returnBoard();
+//
+//                if (board != null) {
+//                    board.delete();
+//                }
+//            } else {
+//                player.setScoreboard(Bukkit.getScoreboardManager().getNewScoreboard());
+//            }
+//        }
+//    }
 
 }
 

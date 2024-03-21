@@ -45,8 +45,8 @@ public class Main extends JavaPlugin {
     protected int maxRedstoneChunk;
     protected String DEFAULT_RESOURCE;
     protected String DEFAULT_RESOURCE_HASH;
-    public Hashtable playerControl = new Hashtable();
-    public Hashtable<Long, Integer> chunkWater = new Hashtable();
+    public Hashtable<String,PlayerStatus> playerControl = new Hashtable();
+    public Hashtable<Long, Long> chunkWater = new Hashtable();
     public MyBukkit myBukkit;
 
     public void onEnable() {
@@ -81,7 +81,7 @@ public class Main extends JavaPlugin {
             new UpdateChecker(this);
         }
 
-        myBukkit = new MyBukkit(this, serverVersion);
+        myBukkit = new MyBukkit(this);
 
         Utils.SetMain(this);
         setupConfig();
@@ -229,7 +229,7 @@ public class Main extends JavaPlugin {
                 getServer().getWorld("world").setGameRule(GameRule.MAX_ENTITY_CRAMMING, 24); //to fix previous mistake
             } else {
                 final int chunckLimit = tmpChuck;
-                this.myBukkit.Run(null, () -> this.setWorldConfigs(chunckLimit), 20);
+                this.myBukkit.runTask(null,null,null, () -> this.setWorldConfigs(chunckLimit));
             }
         }
 
