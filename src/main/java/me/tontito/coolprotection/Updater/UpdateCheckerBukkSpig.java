@@ -34,14 +34,14 @@ public class UpdateCheckerBukkSpig extends BukkitRunnable {
                 int pointer = pagina.indexOf("project-file-name-container");
                 pagina = pagina.substring(pointer); //smaller data
 
-                String tmp = pagina.substring(pagina.indexOf("/projects/" + project));
+                String tmp = pagina.substring(pagina.indexOf("https://cdn.modrinth.com"));
                 String version = tmp.substring(tmp.indexOf("data-name=\"") + 11).split("\"")[0];
                 String url = tmp.split("\"")[0];
 
                 promptUpdate(version, url);
             }
         } catch (Exception e) {
-            Bukkit.getConsoleSender().sendMessage("[" + projectName + "]" + ChatColor.RED + " Connection exception: " + e.getMessage());
+            Bukkit.getConsoleSender().sendMessage("[" + projectName + "]" + ChatColor.RED + " Version checker connection exception: " + e.getMessage());
         }
     }
 
@@ -77,7 +77,7 @@ public class UpdateCheckerBukkSpig extends BukkitRunnable {
 
         if (versionStatus == -1) {
             Bukkit.getConsoleSender().sendMessage("[" + projectName + "]" + ChatColor.GREEN + " THERE IS A NEW UPDATE AVAILABLE Version: " + serverVersion +
-                    " Download it from here: https://dev.bukkit.org" + Url);
+                    " available at: " + Url);
 
         } else if (versionStatus == 0) {
             Bukkit.getConsoleSender().sendMessage("[" + projectName + "]" + ChatColor.DARK_GREEN + " You have the latest released version");

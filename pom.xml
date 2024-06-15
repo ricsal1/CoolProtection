@@ -6,7 +6,7 @@
 
     <groupId>CoolProtection</groupId>
     <artifactId>CoolProtection</artifactId>
-    <version>1.8.0</version>
+    <version>1.8.5</version>
     <packaging>jar</packaging>
 
     <name>CoolProtection</name>
@@ -43,6 +43,28 @@
                     </execution>
                 </executions>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.3.0</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                    </execution>
+                </executions>
+                <configuration>
+                    <relocations>
+                        <relocation>
+                            <pattern>fr.mrmicky.fastboard</pattern>
+                            <!-- Replace 'com.yourpackage' with the package of your plugin ! -->
+                            <shadedPattern>com.yourpackage.fastboard</shadedPattern>
+                        </relocation>
+                    </relocations>
+                </configuration>
+            </plugin>
         </plugins>
         <resources>
             <resource>
@@ -71,6 +93,13 @@
     </repositories>
 
     <dependencies>
+
+        <dependency>
+            <groupId>fr.mrmicky</groupId>
+            <artifactId>fastboard</artifactId>
+            <version>2.1.2</version>
+        </dependency>
+
         <dependency>
             <groupId>dev.folia</groupId>
             <artifactId>folia-api</artifactId>

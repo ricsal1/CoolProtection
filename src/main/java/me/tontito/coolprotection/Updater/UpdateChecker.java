@@ -40,14 +40,14 @@ public class UpdateChecker extends BukkitRunnable {
                 int pointer = pagina.indexOf("project-file-name-container");
                 pagina = pagina.substring(pointer); //smaller data
 
-                String tmp = pagina.substring(pagina.indexOf("/projects/" + project));
+                String tmp = pagina.substring(pagina.indexOf("https://cdn.modrinth.com"));
                 String version = tmp.substring(tmp.indexOf("data-name=\"") + 11).split("\"")[0];
                 String url = tmp.split("\"")[0];
 
                 promptUpdate(version, url);
             }
         } catch (Exception e) {
-            Bukkit.getLogger().info("[" + projectName + "] Connection exception: " + e.getMessage());
+            Bukkit.getLogger().info("[" + projectName + "] Version checker connection exception: " + e.getMessage());
 
             Bukkit.getConsoleSender().sendMessage(net.kyori.adventure.text.Component
                     .text("[" + projectName + "] Connection exception: " + e.getMessage())
@@ -97,7 +97,7 @@ public class UpdateChecker extends BukkitRunnable {
 
         if (versionStatus == -1) {
             component = Component.text(" THERE IS A NEW UPDATE AVAILABLE Version: " + serverVersion +
-                    " Download it from here: https://dev.bukkit.org" + Url, NamedTextColor.GREEN);
+                    " available at: " + Url, NamedTextColor.GREEN);
         } else if (versionStatus == 0) {
             component = Component.text(" You have the latest released version", NamedTextColor.GREEN);
         } else if (versionStatus == 1) {

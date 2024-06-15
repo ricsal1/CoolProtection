@@ -1,6 +1,8 @@
 package me.tontito.coolprotection;
 
 
+import fr.mrmicky.fastboard.FastBoard;
+
 import java.util.Date;
 import java.util.LinkedList;
 
@@ -11,6 +13,19 @@ public class PlayerStatus {
     public int kick = 0;
     public float speed = 0.2f;
     public LinkedList<Sus> suspicious = new LinkedList();
+    private FastBoard board;
+
+    public PlayerStatus() {
+    }
+
+    public void setBoard(FastBoard board) {
+        this.board = board;
+    }
+
+    public FastBoard returnBoard() {
+        return board;
+    }
+
 
     public enum ActionCodes {
         flint,
@@ -18,9 +33,6 @@ public class PlayerStatus {
         destroy,
         spam,
         language;
-    }
-
-    public PlayerStatus() {
     }
 
     public class Sus {

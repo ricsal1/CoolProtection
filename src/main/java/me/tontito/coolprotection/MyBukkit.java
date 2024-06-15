@@ -20,6 +20,12 @@ public class MyBukkit {
 
         String version = Bukkit.getVersion().toUpperCase();
         folia = (version.contains("-FOLIA-"));
+
+        //server type name
+        if (!folia) {
+            String minecraftVersion2 = Bukkit.getServer().getName();
+            folia = (minecraftVersion2.toUpperCase().contains("FOLIA"));
+        }
     }
 
 

@@ -15,9 +15,11 @@ import static org.bukkit.entity.SpawnCategory.MONSTER;
 
 public class Main extends JavaPlugin {
 
-    private TpsCheck tps;
-    private Listeners listen;
-
+    public TpsCheck tps;
+    public int serverVersion = 0;
+    public Hashtable<String, PlayerStatus> playerControl = new Hashtable();
+    public Hashtable<Long, Long> chunkWater = new Hashtable();
+    public MyBukkit myBukkit;
     protected int totalMaxChunkEntities = 70;
     protected int maxChunkEntities = 35;
     protected int maxEntities = 1600;
@@ -26,14 +28,7 @@ public class Main extends JavaPlugin {
     protected float maxSpeed = 0;
     protected int tpsLevel = 0; //0 = normal, 1 = alert, 2 = very low
     protected String serverStatus = null;
-    public int serverVersion = 0;
-
-    private boolean autoShutdown = false;
-    private int autoShutDownTime = 0;
-    private int autoShutDownCounterTime = 15;
-
     protected boolean tpsProtection;
-
     protected boolean ExplodeProtection;
     protected boolean WitherProtection;
     protected int WitherLevel;
@@ -45,12 +40,17 @@ public class Main extends JavaPlugin {
     protected int maxRedstoneChunk;
     protected String DEFAULT_RESOURCE;
     protected String DEFAULT_RESOURCE_HASH;
-    public Hashtable<String,PlayerStatus> playerControl = new Hashtable();
-    public Hashtable<Long, Long> chunkWater = new Hashtable();
-    public MyBukkit myBukkit;
+    private Listeners listen;
+    protected boolean autoShutdown = false;
+    protected int autoShutDownTime = 0;
+    protected int autoShutDownCounterTime = 15;
+    protected boolean AntigriefProtection = false;
+    protected boolean Emergency = false;
 
     public void onEnable() {
-        String version = Bukkit.getVersion().toUpperCase();
+        myBukkit = new MyBukkit(this);
+
+        String version = Bukkit.getServer().getName().toUpperCase();
 
         if (version.contains("PAPER")) {
             serverVersion = 1;
@@ -66,7 +66,7 @@ public class Main extends JavaPlugin {
             serverVersion = 6;
         } else if (version.contains("-SAKURA-")) {
             serverVersion = 7;
-        } else if (version.contains("-FOLIA-")) {
+        } else if (myBukkit.isFolia()) {
             serverVersion = 8;
 
         } else {
@@ -81,12 +81,10 @@ public class Main extends JavaPlugin {
             new UpdateChecker(this);
         }
 
-        myBukkit = new MyBukkit(this);
-
         Utils.SetMain(this);
         setupConfig();
 
-        tps = new TpsCheck(this, autoShutdown, autoShutDownCounterTime, autoShutDownTime);
+        tps = new TpsCheck(this);
         listen = new Listeners(this, tps);
 
         if (serverVersion == 1 || serverVersion == 4 || serverVersion == 5 || serverVersion == 6 || serverVersion == 7 || serverVersion == 8) {
@@ -159,7 +157,7 @@ public class Main extends JavaPlugin {
     }
 
 
-    private void LoadSettings() {
+    public void LoadSettings() {
         FileConfiguration config = getConfig();
 
         try {
@@ -229,7 +227,7 @@ public class Main extends JavaPlugin {
                 getServer().getWorld("world").setGameRule(GameRule.MAX_ENTITY_CRAMMING, 24); //to fix previous mistake
             } else {
                 final int chunckLimit = tmpChuck;
-                this.myBukkit.runTask(null,null,null, () -> this.setWorldConfigs(chunckLimit));
+                this.myBukkit.runTask(null, null, null, () -> this.setWorldConfigs(chunckLimit));
             }
         }
 

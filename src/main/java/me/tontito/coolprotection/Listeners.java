@@ -32,7 +32,6 @@ public class Listeners implements Listener {
 
     protected int maxWithers = 8;
     protected int maxLighting = 4;
-    private boolean AntigriefProtection = false;
     private TpsCheck tps;
     private Main main;
 
@@ -59,7 +58,7 @@ public class Listeners implements Listener {
             return;
         }
 
-        if (AntigriefProtection && event.getMessage().startsWith("/fill") && event.getMessage().toUpperCase().contains("TNT")) {
+        if (main.AntigriefProtection && event.getMessage().startsWith("/fill") && event.getMessage().toUpperCase().contains("TNT")) {
 
             if (main.playerControl.get(event.getPlayer().getUniqueId().toString()) != null) {
                 Player player = event.getPlayer();
@@ -74,7 +73,7 @@ public class Listeners implements Listener {
             event.setCancelled(true);
         }
 
-        if ((main.hackProtection || AntigriefProtection) && event.getMessage().startsWith("/execute as ")) {
+        if ((main.hackProtection || main.AntigriefProtection) && event.getMessage().startsWith("/execute as ")) {
 
             if (main.playerControl.get(event.getPlayer().getUniqueId().toString()) != null) {
                 Player player = event.getPlayer();
@@ -127,18 +126,18 @@ public class Listeners implements Listener {
                         valor = "70"; //game defaults 70 from bukkit.yml
 
                     final int chunckLimit = Integer.parseInt(valor);
-                    main.myBukkit.runTask(null,null,null, () -> main.setWorldConfigs(chunckLimit));
+                    main.myBukkit.runTask(null, null, null, () -> main.setWorldConfigs(chunckLimit));
 
                     chat.setCancelled(true);
                 }
             }
         } else if (message.equalsIgnoreCase("!antigrief on") && player.isOp()) {
-            AntigriefProtection = true;
+            main.AntigriefProtection = true;
             player.sendRawMessage("Enabled antigrief");
             chat.setCancelled(true);
 
         } else if (message.equalsIgnoreCase("!antigrief off") && player.isOp()) {
-            AntigriefProtection = false;
+            main.AntigriefProtection = false;
             player.sendRawMessage("Disabled antigrief");
             chat.setCancelled(true);
 
@@ -165,14 +164,26 @@ public class Listeners implements Listener {
                 player.sendRawMessage(("Current values are TPS: " + tps.lastTPS() + " Optimal Max LivingEntities: " + main.maxLiving + "  maxEntities: " + main.maxEntities + "  maxChunkEntities: " + main.maxChunkEntities));
                 chat.setCancelled(true);
             }
-        } else if (message.equalsIgnoreCase("!emergency") && player.isOp()) {
+        } else if (message.equalsIgnoreCase("!emergency on") && player.isOp()) {
             main.tpsProtection = true;
-            AntigriefProtection = true;
+            main.AntigriefProtection = true;
             main.speedProtection = true;
             main.hackProtection = true;
             main.ExplodeProtection = true;
             main.WitherProtection = true;
+            main.antiChatReport = true;
+            main.autoShutdown = false;
+            main.Emergency =true;
+            main.totalMaxChunkEntities = 30; //safe default
+            main.myBukkit.runTask(null, null, null, () -> main.setWorldConfigs(main.totalMaxChunkEntities));
             player.sendRawMessage("Enabled emergency mode, all protections temporarily on!");
+            tps.registerScoreBoards(chat.getPlayer());
+            chat.setCancelled(true);
+
+        } else if (message.equalsIgnoreCase("!emergency off") && player.isOp()) {
+            main.LoadSettings();
+            main.Emergency =false;
+            player.sendRawMessage("Disabled emergency mode, reloaded configs!");
             tps.registerScoreBoards(chat.getPlayer());
             chat.setCancelled(true);
         }
@@ -647,7 +658,7 @@ public class Listeners implements Listener {
             return;
         }
 
-        if (!AntigriefProtection || e.getPlayer().isOp()) return;
+        if (!main.AntigriefProtection || e.getPlayer().isOp()) return;
         e.setCancelled(true);
     }
 
@@ -662,7 +673,7 @@ public class Listeners implements Listener {
             return;
         }
 
-        if (!AntigriefProtection || e.getPlayer().isOp()) return;
+        if (!main.AntigriefProtection || e.getPlayer().isOp()) return;
         e.setCancelled(true);
     }
 
@@ -866,7 +877,7 @@ public class Listeners implements Listener {
 
         PlayerStatus pls = main.playerControl.get(player.getUniqueId().toString());
 
-        if (action == Action.RIGHT_CLICK_BLOCK  && event.getItem() != null && event.getItem().getType() == Material.FLINT_AND_STEEL) {
+        if (action == Action.RIGHT_CLICK_BLOCK && event.getItem() != null && event.getItem().getType() == Material.FLINT_AND_STEEL) {
             if (pls.kick > 0) {
                 main.alert = "Blocked flintAndSteel fire";
                 Utils.logToFile("Protection Manager", player.getName() + " was flint and steel blocked");
@@ -1029,7 +1040,7 @@ public class Listeners implements Listener {
                         }
 
                         Location newLoc = loc.add(0, 1, 0); //incrementa 1 ao existente em loop
-                         block = newLoc.getBlock();
+                        block = newLoc.getBlock();
 
 //                        if (block.getX() == 2504 && block.getZ() == -4011)
 //                            System.out.println(i + "     " + block.getType() + "     " + block.getX() + ":" + block.getY() + ":" + block.getZ());
@@ -1083,113 +1094,5 @@ public class Listeners implements Listener {
         }
     }
 
-
-    //@EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
-    public void onBlockPhysicsv1(BlockPhysicsEvent event) {
-
-        if (!main.tpsProtection) return;
-
-        if (main.serverVersion == 2 || main.serverVersion == 3) return;
-
-        Block block = event.getBlock();
-
-        if (block.getType() == Material.WATER) {
-            long mytime = System.nanoTime();
-
-
-            Long chunk = block.getChunk().getChunkKey();
-
-            synchronized (this) {
-                long global = -1;
-                Long test = main.chunkWater.get(global);
-
-                if (test == null) {
-                    main.chunkWater.put(global, (long) 1);
-                } else {
-                    main.chunkWater.replace(global, (test + 1));
-                }
-
-                test = main.chunkWater.get(chunk);
-
-                if (test == null) {
-                    main.chunkWater.put(chunk, (long) 1);
-                } else {
-                    main.chunkWater.replace(chunk, (test + 1));
-                }
-
-                if (main.chunkWater.get(chunk) > 400) { //limit of 400 for each chunk
-
-                    long processed = -3;
-                    Long testproce = main.chunkWater.get(processed);
-
-                    if (testproce == null) {
-                        main.chunkWater.put(processed, (long) 1);
-                    } else {
-                        main.chunkWater.replace(processed, (testproce + 1));
-                    }
-
-                    Location loc = block.getLocation();
-
-                    block.setType(Material.AIR);
-
-                    Block blockNonWaterAir = null;
-                    int jumpy = 0;
-
-                    for (int i = 1; i < 350; i++) {
-                        if (jumpy > 10) {
-
-                            long time = -4;
-                            Long testtime = main.chunkWater.get(time);
-
-                            if (testtime == null) {
-                                main.chunkWater.put(time, (System.nanoTime() - mytime));
-                            } else {
-                                main.chunkWater.replace(time, (testtime + (System.nanoTime() - mytime)));
-                            }
-
-                            break;
-                        }
-
-                        Location newLoc = loc.add(0, 1, 0);
-                        Block testBlock = newLoc.getBlock();
-
-                        if (testBlock.getType() == Material.WATER) {
-
-                            int level = ((Levelled) testBlock.getBlockData()).getLevel();
-                            block = testBlock;
-                            block.setType(Material.AIR);
-
-                            if (level == 0) {
-
-                                long time = -4;
-                                Long testtime = main.chunkWater.get(time);
-
-                                if (testtime == null) {
-                                    main.chunkWater.put(time, (System.nanoTime() - mytime));
-                                } else {
-                                    main.chunkWater.replace(time, (testtime + (System.nanoTime() - mytime)));
-                                }
-
-                                return; //game over mf
-                            }
-
-                            jumpy = 0;
-                        } else if (testBlock.getType() == Material.AIR) {
-                            jumpy++;
-                        } else {
-                            if (blockNonWaterAir == null) {
-                                blockNonWaterAir = testBlock;
-                            }
-                            jumpy++;
-                        }
-                    }
-
-                    if (blockNonWaterAir != null) {
-                        blockNonWaterAir.setType(Material.AIR);
-                    }
-                }
-            }
-        }
-    }
 
 }
