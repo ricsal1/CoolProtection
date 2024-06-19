@@ -205,7 +205,7 @@ public class Listeners implements Listener {
             extra = ChatColor.RED;
         }
 
-        String message = "<" + extra + player.getName() + ChatColor.BLACK + "> " + e.getMessage();
+        String message = "<" + extra + player.getName() + ChatColor.WHITE + "> " + e.getMessage();
 
         Iterator var8 = Bukkit.getOnlinePlayers().iterator();
 
@@ -301,7 +301,8 @@ public class Listeners implements Listener {
         int level = location.getBlockY();
         String mundo = location.getWorld().getName();
 
-        if (event.getEntityType() == EntityType.PRIMED_TNT && level > main.ExplosionLevel) {
+
+        if (event.getEntityType() == EntityType.TNT && level > main.ExplosionLevel) {
 
             Entity causer = ((TNTPrimed) event.getEntity()).getSource();
 
@@ -319,14 +320,14 @@ public class Listeners implements Listener {
             event.setCancelled(true);
             return;
 
-        } else if (event.getEntityType() == EntityType.MINECART_TNT && level > main.ExplosionLevel) {
+        } else if (event.getEntityType() == EntityType.TNT_MINECART && level > main.ExplosionLevel) {
 
             getServer().broadcastMessage(" No TNT party here!!");
             event.setCancelled(true);
             return;
         }
 
-        if (event.getEntityType() == EntityType.ENDER_CRYSTAL && level > main.ExplosionLevel && !(mundo.endsWith("_nether") || mundo.endsWith("_end"))) {
+        if (event.getEntityType() == EntityType.END_CRYSTAL && level > main.ExplosionLevel && !(mundo.endsWith("_nether") || mundo.endsWith("_end"))) {
             getServer().broadcastMessage(" No end crystals here!");
             event.setCancelled(true);
         }
@@ -358,7 +359,7 @@ public class Listeners implements Listener {
             int counter = 0;
 
             for (Entity entities : location.getChunk().getEntities()) {
-                if (entities.getType().equals(EntityType.LIGHTNING)) {
+                if (entities.getType().equals(EntityType.LIGHTNING_BOLT)) {
                     counter++;
 
                     if (counter > maxLighting) {
@@ -634,7 +635,7 @@ public class Listeners implements Listener {
         }
 
         for (Entity entities : location.getChunk().getEntities()) {
-            if (entities.getType().equals(EntityType.FIREWORK)) {
+            if (entities.getType().equals(EntityType.FIREWORK_ROCKET)) {
                 counter++;
 
                 if (counter > 15) entities.remove();

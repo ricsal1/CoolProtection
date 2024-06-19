@@ -1,5 +1,6 @@
 package me.tontito.coolprotection;
 
+import me.tontito.coolprotection.Updater.Metrics;
 import me.tontito.coolprotection.Updater.UpdateChecker;
 import me.tontito.coolprotection.Updater.UpdateCheckerBukkSpig;
 import org.bukkit.Bukkit;
@@ -98,6 +99,13 @@ public class Main extends JavaPlugin {
             getLogger().info(ChatColor.GREEN + " Enabled and balanced for " + version);
         } else {
             getLogger().info(ChatColor.GREEN + " Enabled without TPS control, for " + version);
+        }
+
+        try {
+            myBukkit.runTaskLater(null, null, null,  () -> new Metrics(this, 22317),5);
+        }
+        catch (Exception e){
+            getLogger().info(ChatColor.RED + " Failed to register into Bstats");
         }
     }
 

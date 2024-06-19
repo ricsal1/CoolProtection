@@ -295,7 +295,7 @@ public class TpsCheck implements Listener {
         int minute = date.toLocalTime().getMinute();
         int hours = date.toLocalTime().getHour();
 
-        if (main.autoShutdown && (main.autoShutDownTime <= 7 && hours >= main.autoShutDownTime && hours <= 7)) {
+        if (main.autoShutdown && (main.autoShutDownTime <= 6 && hours >= main.autoShutDownTime && hours <= 6)) {
 
             if (main.getServer().getOnlinePlayers().isEmpty()) {
 
@@ -360,7 +360,7 @@ public class TpsCheck implements Listener {
                 main.myBukkit.runTask(null, local, null, () -> {
                     for (Entity entity : local.getNearbyEntities(200, 200, 200)) {
 
-                        if (entity instanceof Item && entity.isOnGround() && entity.getType() == EntityType.DROPPED_ITEM) {
+                        if (entity instanceof Item && entity.isOnGround() && entity.getType() == EntityType.ITEM) {
                             Item item = (Item) entity;
 
                             if (cacheHash.get(item) != null) {
@@ -385,7 +385,7 @@ public class TpsCheck implements Listener {
 
                 for (Entity entity : world.getEntities()) {
 
-                    if (entity instanceof Item && entity.isOnGround() && entity.getType() == EntityType.DROPPED_ITEM) {
+                    if (entity instanceof Item && entity.isOnGround() && entity.getType() == EntityType.ITEM) {
                         Item item = (Item) entity;
 
                         if (item.getTicksLived() > 3000 && item.getItemStack().getEnchantments().isEmpty()) {
