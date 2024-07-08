@@ -25,6 +25,7 @@ import java.util.Iterator;
 import java.util.Map;
 
 import static org.bukkit.Bukkit.getServer;
+import static org.bukkit.Material.WIND_CHARGE;
 import static org.bukkit.entity.SpawnCategory.MONSTER;
 
 
@@ -173,7 +174,7 @@ public class Listeners implements Listener {
             main.WitherProtection = true;
             main.antiChatReport = true;
             main.autoShutdown = false;
-            main.Emergency =true;
+            main.Emergency = true;
             main.totalMaxChunkEntities = 30; //safe default
             main.myBukkit.runTask(null, null, null, () -> main.setWorldConfigs(main.totalMaxChunkEntities));
             player.sendRawMessage("Enabled emergency mode, all protections temporarily on!");
@@ -182,7 +183,7 @@ public class Listeners implements Listener {
 
         } else if (message.equalsIgnoreCase("!emergency off") && player.isOp()) {
             main.LoadSettings();
-            main.Emergency =false;
+            main.Emergency = false;
             player.sendRawMessage("Disabled emergency mode, reloaded configs!");
             tps.registerScoreBoards(chat.getPlayer());
             chat.setCancelled(true);
@@ -206,6 +207,10 @@ public class Listeners implements Listener {
         }
 
         String message = "<" + extra + player.getName() + ChatColor.WHITE + "> " + e.getMessage();
+
+        main.myBukkit.runTaskLater(null, null, null, () -> {
+            Utils.logToFile("Chat Manager", message);
+        }, 1);
 
         Iterator var8 = Bukkit.getOnlinePlayers().iterator();
 
@@ -699,12 +704,16 @@ public class Listeners implements Listener {
             if (!player.isSneaking() && !player.isFlying() && !player.isGliding() && !(player.getVehicle() instanceof Horse) && block.getType().equals(Material.AIR) && !player.hasPotionEffect(PotionEffectType.LEVITATION)) { //jumping
 
                 ItemStack it = player.getInventory().getItemInMainHand();
-                if (it.getType() == Material.TRIDENT && it.containsEnchantment(Enchantment.RIPTIDE)) {
+
+                if ((it.getType() == Material.TRIDENT && it.containsEnchantment(Enchantment.RIPTIDE)) || it.getType() == WIND_CHARGE || (it.getType() == Material.MACE && it.containsEnchantment(Enchantment.WIND_BURST))) {
+                    p.counter = -25;
                     return;
                 }
 
                 ItemStack it2 = player.getInventory().getItemInOffHand();
-                if (it2.getType() == Material.TRIDENT && it2.containsEnchantment(Enchantment.RIPTIDE)) {
+
+                if ((it2.getType() == Material.TRIDENT && it2.containsEnchantment(Enchantment.RIPTIDE)) || it2.getType() == WIND_CHARGE || (it2.getType() == Material.MACE && it2.containsEnchantment(Enchantment.WIND_BURST))) {
+                    p.counter = -25;
                     return;
                 }
 
@@ -746,8 +755,8 @@ public class Listeners implements Listener {
                         }
                     }
 
-                    Utils.logToFile("Protection Manager", player.getName() + "   " + it + "     " + it2 + "    " + it.containsEnchantment(Enchantment.RIPTIDE) + "    " + it2.containsEnchantment(Enchantment.RIPTIDE));
-                    Utils.logToFile("Protection Manager", player.getName() + "   " + heightDiff + "    counter " + p.counter + "    " + (p.hight - currentHeight) + "    " + block2 + "   " + player.hasPotionEffect(PotionEffectType.LEVITATION));
+                    Utils.logToFile("Protection Manager debug", player.getName() + "   " + it + "     " + it2 + "    " + it.containsEnchantment(Enchantment.RIPTIDE) + "    " + it2.containsEnchantment(Enchantment.RIPTIDE));
+                    Utils.logToFile("Protection Manager debug", player.getName() + "   " + heightDiff + "    counter " + p.counter + "    " + (p.hight - currentHeight) + "    " + block2 + "   " + player.hasPotionEffect(PotionEffectType.LEVITATION));
 
                     double currentVecX = player.getVelocity().getX();
                     double currentVecZ = player.getVelocity().getZ();
@@ -953,6 +962,9 @@ public class Listeners implements Listener {
 
         if (main.serverVersion == 2 || main.serverVersion == 3) return;
 
+        int mytps = tps.lastTPS();
+        if (mytps >= 13) return; //less them 13 tps will trigger this analysis
+
         long global = -1;
         Long testGlobal = main.chunkWater.get(global);
 
@@ -965,7 +977,7 @@ public class Listeners implements Listener {
         long time = -4;
         Long testtime = main.chunkWater.get(time);
 
-        //only 5ms to process these events
+        //max 5ms to process these events each tick if low tps triggered
         if (testtime != null && testtime > 5000000) {
             long overtime = -5;
             Long testproce = main.chunkWater.get(overtime);
@@ -975,7 +987,6 @@ public class Listeners implements Listener {
             } else {
                 main.chunkWater.replace(overtime, (testproce + 1));
             }
-
             return;
         }
 

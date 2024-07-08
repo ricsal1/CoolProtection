@@ -6,7 +6,7 @@
 
     <groupId>CoolProtection</groupId>
     <artifactId>CoolProtection</artifactId>
-    <version>1.8.5</version>
+    <version>1.9</version>
     <packaging>jar</packaging>
 
     <name>CoolProtection</name>

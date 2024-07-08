@@ -37,7 +37,7 @@ public class TpsCheck implements Listener {
 
     int[] tps = new int[61];//average tps for folia and full for others
     int[] regions = new int[61]; //region total by second
-    long[][] ticks = new long[30][10]; //tick and region counter
+    long[][] ticks = new long[3][10]; //tick and region counter
 
 
     public TpsCheck(@NotNull Main main) {
@@ -84,58 +84,69 @@ public class TpsCheck implements Listener {
         LocalDateTime date = LocalDateTime.now();
         int seconds = date.toLocalTime().getSecond();
 
-      //  main.getLogger().info( "      " + tick);
-
         synchronized (this) {
-            if (remainDuration < 0) tps[seconds] = tps[seconds] - 1;
-            else tps[seconds] = tps[seconds] + 1;
+            int inc;
 
-            if (currSecond == seconds) {
+            if (remainDuration < 0) inc = -1;
+            else inc = 1;
 
-                if (main.myBukkit.isFolia()) {
-                    int i = 0;
+            tps[seconds] = tps[seconds] + inc;
 
-                    while (ticks[0][i] != 0 && ticks[(int) ticks[0][i]][i] != (tick - 1)) {
-                       // main.getLogger().info(ticks[0][i] + "   " + ticks[(int) ticks[0][i]][i] + "      " + tick);
-                        i++;
+            if (main.myBukkit.isFolia()) {
 
-                        if (i >= ticks[0].length) return;
-                    }
+                int i = 0;
+                long value = ticks[0][i];
+                long maxSize = ticks[0].length;
 
-                    ticks[0][i] = i + 1;
-                    ticks[(int) ticks[0][i]][i] = tick;
+                while (value != 0 && value != (tick - 1)) {
+                    i++;
+
+                    if (i >= maxSize) return;
+
+                    value = ticks[0][i];
                 }
 
-            } else {
+                ticks[0][i] = tick;
+                ticks[1][i] = (ticks[1][i] + inc);
+
+              //  System.out.println(i + "   " + tick + "  " + ticks[1][i]);
+            }
+
+            //changed second
+            if (currSecond != seconds) {
+
+                lastSecond = currSecond;
+                currSecond = seconds;
+
                 //updates last second
                 if (main.myBukkit.isFolia()) {
 
                     int maxRegions = ticks[0].length - 1;
+                    int minRegions = 0;
+                    String output = "";
 
                     //how many are set
-                    while (ticks[0][maxRegions] == 0) {
-                        maxRegions--;
-
-                        if (maxRegions < 0) {
-                            return;
-                        }
+                    while (minRegions <= maxRegions && ticks[0][minRegions] > 0) {
+                        output = output + "Region " + (minRegions + 1) + ": " + ticks[1][minRegions] + "\n";
+                        minRegions++;
                     }
 
-                    regions[currSecond] = maxRegions + 1;
-                    tps[currSecond] = tps[currSecond] / regions[currSecond];
+                //    System.out.println(minRegions + "    " + tps[lastSecond] + "\n" + output);
+
+                    if (minRegions > 0) {
+                        regions[lastSecond] = minRegions;
+                        tps[lastSecond] = tps[lastSecond] / regions[lastSecond];
+                    }
 
                     //reset with small margin
-                    ticks = new long[30][maxRegions + 4];
+                    ticks = new long[3][maxRegions + 4];
 
-                    if (currSecond == 59) {
+                    if (lastSecond == 59) {
                         for (int i = 0; i < 57; i++) {
                             regions[i] = 0;
                         }
-                    } else regions[currSecond + 1] = 0;
+                    } else regions[lastSecond + 1] = 0;
                 }
-
-                lastSecond = currSecond;
-                currSecond = seconds;
 
                 lastRedStone = redStoneObjs;
                 redStoneObjs = 0;
