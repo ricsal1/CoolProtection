@@ -1,5 +1,16 @@
 name: CoolProtection
-version: 1.9
+version: 2.0.1
 main: me.tontito.coolprotection.Main
 api-version: 1.20
 folia-supported: true
+
+commands:
+  coolprotection:
+    description: Admin command for the CoolProtection plugin.
+    aliases: [coolp]
+permissions:
+  coolp.*:
+    description: Gives access to all CoolProtection commands
+    children:
+      coolprotection.admin: false
+      coolprotection.monitor: false

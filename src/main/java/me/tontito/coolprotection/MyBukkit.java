@@ -12,7 +12,7 @@ import static org.bukkit.Bukkit.getServer;
 import static org.bukkit.Bukkit.isOwnedByCurrentRegion;
 
 public class MyBukkit {
-    private Main main;
+    private final Main main;
     private boolean folia;
 
     public MyBukkit(Main main) {

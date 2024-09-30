@@ -4,7 +4,10 @@ import com.destroystokyo.paper.event.entity.PreCreatureSpawnEvent;
 import com.destroystokyo.paper.event.server.ServerTickEndEvent;
 import fr.mrmicky.fastboard.FastBoard;
 import org.bukkit.*;
-import org.bukkit.entity.*;
+import org.bukkit.entity.Entity;
+import org.bukkit.entity.Item;
+import org.bukkit.entity.LivingEntity;
+import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.jetbrains.annotations.NotNull;
@@ -38,6 +41,7 @@ public class TpsCheck implements Listener {
     int[] tps = new int[61];//average tps for folia and full for others
     int[] regions = new int[61]; //region total by second
     long[][] ticks = new long[3][10]; //tick and region counter
+    private long lastPoll = 0;
 
 
     public TpsCheck(@NotNull Main main) {
@@ -47,7 +51,8 @@ public class TpsCheck implements Listener {
         if (main.serverVersion == 2 || main.serverVersion == 3) {
             main.getServer().getScheduler().scheduleSyncRepeatingTask(
                     main, () -> {
-                        updateTps(0, main.getServer().getCurrentTick());
+                        lastPoll++;
+                        updateTps(0, lastPoll);
                     }, 0,// waits 0 ticks
                     1 // 1 tick de interval (tick interno, 20 by second, if at least one is missing then we have problems)
             );
@@ -108,8 +113,6 @@ public class TpsCheck implements Listener {
 
                 ticks[0][i] = tick;
                 ticks[1][i] = (ticks[1][i] + inc);
-
-              //  System.out.println(i + "   " + tick + "  " + ticks[1][i]);
             }
 
             //changed second
@@ -130,8 +133,6 @@ public class TpsCheck implements Listener {
                         output = output + "Region " + (minRegions + 1) + ": " + ticks[1][minRegions] + "\n";
                         minRegions++;
                     }
-
-                //    System.out.println(minRegions + "    " + tps[lastSecond] + "\n" + output);
 
                     if (minRegions > 0) {
                         regions[lastSecond] = minRegions;
@@ -174,7 +175,7 @@ public class TpsCheck implements Listener {
 
                 showLagToPlayers();
 
-                updatePlayerStatus();
+                if (lastSecond == 59) updatePlayerStatus();
 
                 main.chunkWater.clear();
             }
@@ -371,7 +372,7 @@ public class TpsCheck implements Listener {
                 main.myBukkit.runTask(null, local, null, () -> {
                     for (Entity entity : local.getNearbyEntities(200, 200, 200)) {
 
-                        if (entity instanceof Item && entity.isOnGround() && entity.getType() == EntityType.ITEM) {
+                        if (entity instanceof Item && entity.isOnGround()) {
                             Item item = (Item) entity;
 
                             if (cacheHash.get(item) != null) {
@@ -396,7 +397,7 @@ public class TpsCheck implements Listener {
 
                 for (Entity entity : world.getEntities()) {
 
-                    if (entity instanceof Item && entity.isOnGround() && entity.getType() == EntityType.ITEM) {
+                    if (entity instanceof Item && entity.isOnGround()) {
                         Item item = (Item) entity;
 
                         if (item.getTicksLived() > 3000 && item.getItemStack().getEnchantments().isEmpty()) {
@@ -472,7 +473,7 @@ public class TpsCheck implements Listener {
             if (p != null) {
                 //for players with penalties
                 if (main.hackProtection && p.speed < 0.2) {
-                    p.speed = p.speed + 0.02f;
+                    p.speed = p.speed + 0.01f;
                     player.setWalkSpeed(p.speed);
                 }
                 //for players with wrong speed
@@ -547,10 +548,10 @@ public class TpsCheck implements Listener {
         if (main.Emergency) {
             lines[3] = ChatColor.RED + "Shut:" + main.autoShutdown + "@" + String.format("00", main.autoShutDownTime) + "h  TpsCrt:" + main.tpsProtection + "  NChatRep:" + main.antiChatReport + "  AntiHack:" + main.hackProtection;
             lines[4] = ChatColor.RED + "AntiGrief: " + main.AntigriefProtection + "  Speed: " + main.speedProtection + "  Expl: " + main.ExplodeProtection + "  Wither: " + main.WitherProtection;
-            lines[5] = ChatColor.YELLOW + "" + main.alert;
+            lines[5] = ChatColor.YELLOW + main.alert;
         } else {
             lines[3] = ChatColor.GREEN + "Shut:" + main.autoShutdown + "@" + String.format("00", main.autoShutDownTime) + "h  TpsCrt:" + main.tpsProtection + "  NChatRep:" + main.antiChatReport + "  AntiHack:" + main.hackProtection;
-            lines[4] = ChatColor.YELLOW + "" + main.alert;
+            lines[4] = ChatColor.YELLOW + main.alert;
         }
 
         String[] finalFines;
@@ -558,9 +559,7 @@ public class TpsCheck implements Listener {
         if (main.Emergency) finalFines = new String[6];
         else finalFines = new String[5];
 
-        for (int i = 0; i < finalFines.length; i++) {
-            finalFines[i] = lines[i];
-        }
+        System.arraycopy(lines, 0, finalFines, 0, finalFines.length);
 
         pls.returnBoard().updateLines(finalFines);
     }

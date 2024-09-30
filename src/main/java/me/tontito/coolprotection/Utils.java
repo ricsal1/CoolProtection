@@ -1,5 +1,7 @@
 package me.tontito.coolprotection;
 
+import org.bukkit.entity.Player;
+
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -90,4 +92,5 @@ public class Utils {
         }
         return 0;//same version
     }
-}
+
+ }

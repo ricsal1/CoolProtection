@@ -33,15 +33,15 @@ public class Listeners implements Listener {
 
     protected int maxWithers = 8;
     protected int maxLighting = 4;
-    private TpsCheck tps;
-    private Main main;
+    private final TpsCheck tps;
+    private final Main main;
 
     public Listeners(Main main, TpsCheck tps) {
         this.main = main;
         this.tps = tps;
 
         for (Player player : Bukkit.getOnlinePlayers()) {
-            PlayerStatus p = new PlayerStatus();
+            PlayerStatus p = new PlayerStatus(main, player);
             p.speed = player.getWalkSpeed();
 
             main.playerControl.put(player.getUniqueId().toString(), p);
@@ -51,42 +51,55 @@ public class Listeners implements Listener {
 
     @EventHandler
     public void onPlayerCommandPreprocess(PlayerCommandPreprocessEvent event) {
+        Player player = event.getPlayer();
 
-        PlayerStatus pls = main.playerControl.get(event.getPlayer().getUniqueId().toString());
+        PlayerStatus pls = main.playerControl.get(player.getUniqueId().toString());
 
         if (pls.kick > 2) {
             event.setCancelled(true);
             return;
         }
 
-        if (main.AntigriefProtection && event.getMessage().startsWith("/fill") && event.getMessage().toUpperCase().contains("TNT")) {
+        if (event.getMessage().startsWith("/fill") || event.getMessage().toUpperCase().contains("TNT")) {
 
-            if (main.playerControl.get(event.getPlayer().getUniqueId().toString()) != null) {
-                Player player = event.getPlayer();
+            if (!player.hasPermission("coolprotection.admin")) {
 
-                PlayerStatus play = main.playerControl.get(player.getUniqueId().toString());
-                play.speed = play.speed - 0.02f;
+                //must be before register or will count twice at start
+                if (pls.applyPenalty(true)) {
+                    main.alert = "Blocked commands";
+                    Utils.logToFile("Protection Manager", player.getName() + " had commands blocked");
+                    event.setCancelled(true);
+                    return;
+                }
 
-                player.setWalkSpeed(play.speed);
-                main.getLogger().info("Slowing player " + player.getName());
+                if (main.dinamicHackProtection) {
+                    pls.registerSusList(PlayerStatus.ActionCodes.commands, 60, 3);
+                }
+
+                event.setCancelled(true);
+                player.sendMessage("You dont have permission");
             }
-
-            event.setCancelled(true);
         }
 
-        if ((main.hackProtection || main.AntigriefProtection) && event.getMessage().startsWith("/execute as ")) {
+        if (event.getMessage().startsWith("/execute as ")) {
 
-            if (main.playerControl.get(event.getPlayer().getUniqueId().toString()) != null) {
-                Player player = event.getPlayer();
+            if (!player.hasPermission("coolprotection.admin")) {
 
-                PlayerStatus play = main.playerControl.get(player.getUniqueId().toString());
-                play.speed = play.speed - 0.02f;
+                //must be before register or will count twice at start
+                if (pls.applyPenalty(true)) {
+                    main.alert = "Blocked commands";
+                    Utils.logToFile("Protection Manager", player.getName() + " had commands blocked");
+                    event.setCancelled(true);
+                    return;
+                }
 
-                player.setWalkSpeed(play.speed);
-                main.getLogger().info("Slowing player " + player.getName());
+                if (main.dinamicHackProtection) {
+                    pls.registerSusList(PlayerStatus.ActionCodes.commands, 60, 3);
+                }
+
+                event.setCancelled(true);
+                player.sendMessage("You dont have permission");
             }
-
-            event.setCancelled(true);
         }
     }
 
@@ -103,15 +116,15 @@ public class Listeners implements Listener {
 
         String message = chat.getMessage().toLowerCase();
 
-        if (message.equalsIgnoreCase("!lagmeter on") && player.isOp()) {
+        if (message.equalsIgnoreCase("!lagmeter on") && (player.hasPermission("coolprotection.admin") || player.hasPermission("coolprotection.monitor"))) {
             tps.registerScoreBoards(chat.getPlayer());
             chat.setCancelled(true);
 
-        } else if (message.equalsIgnoreCase("!lagmeter off") && player.isOp()) {
+        } else if (message.equalsIgnoreCase("!lagmeter off") && (player.hasPermission("coolprotection.admin") || player.hasPermission("coolprotection.monitor"))) {
             tps.deleteScoreBoards(chat.getPlayer());
             chat.setCancelled(true);
 
-        } else if (message.startsWith("!maxchunk ") && player.isOp()) {
+        } else if (message.startsWith("!maxchunk ") && player.hasPermission("coolprotection.admin")) {
 
             if (message.split(" ").length > 1) {
                 String valor = message.split(" ")[1];
@@ -132,17 +145,17 @@ public class Listeners implements Listener {
                     chat.setCancelled(true);
                 }
             }
-        } else if (message.equalsIgnoreCase("!antigrief on") && player.isOp()) {
+        } else if (message.equalsIgnoreCase("!antigrief on") && player.hasPermission("coolprotection.admin")) {
             main.AntigriefProtection = true;
             player.sendRawMessage("Enabled antigrief");
             chat.setCancelled(true);
 
-        } else if (message.equalsIgnoreCase("!antigrief off") && player.isOp()) {
+        } else if (message.equalsIgnoreCase("!antigrief off") && player.hasPermission("coolprotection.admin")) {
             main.AntigriefProtection = false;
             player.sendRawMessage("Disabled antigrief");
             chat.setCancelled(true);
 
-        } else if (message.equalsIgnoreCase("!autoBalance off") && player.isOp()) {
+        } else if (message.equalsIgnoreCase("!autoBalance off") && player.hasPermission("coolprotection.admin")) {
             if (main.tpsProtection) {
                 main.tpsProtection = false;
 
@@ -153,7 +166,7 @@ public class Listeners implements Listener {
                 player.sendRawMessage("Disabled adaptative balancing");
             }
             chat.setCancelled(true);
-        } else if (message.equalsIgnoreCase("!autoBalance on") && player.isOp()) {
+        } else if (message.equalsIgnoreCase("!autoBalance on") && player.hasPermission("coolprotection.admin")) {
             if (!main.tpsProtection) {
                 main.tpsProtection = true;
 
@@ -165,7 +178,7 @@ public class Listeners implements Listener {
                 player.sendRawMessage(("Current values are TPS: " + tps.lastTPS() + " Optimal Max LivingEntities: " + main.maxLiving + "  maxEntities: " + main.maxEntities + "  maxChunkEntities: " + main.maxChunkEntities));
                 chat.setCancelled(true);
             }
-        } else if (message.equalsIgnoreCase("!emergency on") && player.isOp()) {
+        } else if (message.equalsIgnoreCase("!emergency on") && player.hasPermission("coolprotection.admin")) {
             main.tpsProtection = true;
             main.AntigriefProtection = true;
             main.speedProtection = true;
@@ -181,7 +194,7 @@ public class Listeners implements Listener {
             tps.registerScoreBoards(chat.getPlayer());
             chat.setCancelled(true);
 
-        } else if (message.equalsIgnoreCase("!emergency off") && player.isOp()) {
+        } else if (message.equalsIgnoreCase("!emergency off") && player.hasPermission("coolprotection.admin")) {
             main.LoadSettings();
             main.Emergency = false;
             player.sendRawMessage("Disabled emergency mode, reloaded configs!");
@@ -227,7 +240,7 @@ public class Listeners implements Listener {
         Player player = event.getPlayer();
 
         if (main.playerControl.get(player.getUniqueId().toString()) == null) {
-            PlayerStatus p = new PlayerStatus();
+            PlayerStatus p = new PlayerStatus(main, player);
             p.speed = player.getWalkSpeed();
 
             main.playerControl.put(player.getUniqueId().toString(), p);
@@ -616,7 +629,6 @@ public class Listeners implements Listener {
                     main.tpsLevel = 2;
                     main.alert = "MaxEnt (PlaceEntity) " + entidade;
                     Utils.logToFile("Protection Manager", main.alert);
-                    return;
                 }
             }
         }
@@ -656,30 +668,33 @@ public class Listeners implements Listener {
 
     @EventHandler(ignoreCancelled = true)
     public void onProcessBlockBreakEvent(BlockBreakEvent e) {
+        Player player = e.getPlayer();
+        PlayerStatus pls = main.playerControl.get(player.getUniqueId().toString());
 
-        PlayerStatus pls = main.playerControl.get(e.getPlayer().getUniqueId().toString());
-
-        if (pls.kick > 2) {
+        if (pls.applyPenalty(false)) {
             e.setCancelled(true);
             return;
         }
 
-        if (!main.AntigriefProtection || e.getPlayer().isOp()) return;
+        if (!main.AntigriefProtection || player.hasPermission("coolprotection.admin") || player.hasPermission("coolprotection.monitor"))
+            return;
         e.setCancelled(true);
     }
 
 
     @EventHandler(ignoreCancelled = true)
     public void onBlockPlaceEvent(BlockPlaceEvent e) {
+        Player player = e.getPlayer();
+        PlayerStatus pls = main.playerControl.get(player.getUniqueId().toString());
 
-        PlayerStatus pls = main.playerControl.get(e.getPlayer().getUniqueId().toString());
-
-        if (pls.kick > 2) {
+        if (pls.applyPenalty(false)) {
             e.setCancelled(true);
             return;
         }
 
-        if (!main.AntigriefProtection || e.getPlayer().isOp()) return;
+        if (!main.AntigriefProtection || player.hasPermission("coolprotection.admin") || player.hasPermission("coolprotection.monitor"))
+            return;
+
         e.setCancelled(true);
     }
 
@@ -767,19 +782,12 @@ public class Listeners implements Listener {
                     if (p.counter > 0) p.counter = 0;
                     p.hack = false;
                     p.hight = 0;
-                    p.kick++;
 
-                    if (p.kick == 2) {
-                        player.kickPlayer("You are been warned " + player.getName() + " don't hack!");
-                    }
+                    //will self increment after kick >= 1
+                    p.applyPenalty((p.kick >= 1));
 
-                    if (p.kick == 8) {
-                        player.kickPlayer("Last warning " + player.getName() + "!");
-                    }
-
-                    if (p.kick == 10) {
-                        player.banPlayer("You have been warned " + player.getName() + ", goodbye!");
-                    }
+                    //initial trigger, after applyPenalty so that it doesnt inc twice for 0
+                    if (p.kick < 1) p.kick++;
 
                     return;
 
@@ -834,6 +842,112 @@ public class Listeners implements Listener {
 
 
     @EventHandler(ignoreCancelled = true)
+    public void onThrow(PlayerInteractEvent event) {
+
+        Player player = event.getPlayer();
+        PlayerStatus pls = main.playerControl.get(player.getUniqueId().toString());
+
+        if (pls.applyPenalty(false)) {
+            event.setCancelled(true);
+            return;
+        }
+
+        if (!main.tpsProtection) return;
+
+        int mytps = tps.lastTPS();
+        if (mytps >= 18) return;
+
+        Action action = event.getAction();
+
+        if (action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK) {
+            ItemStack it = player.getInventory().getItemInMainHand();
+            if (it.getType() == Material.SPLASH_POTION) {
+                main.alert = "Blocked thrown splash potion";
+                event.setCancelled(true);
+            }
+        }
+    }
+
+
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.LOWEST)
+    public void onFlintAndSteel(PlayerInteractEvent event) {
+
+        Action action = event.getAction();
+
+        if (action == Action.RIGHT_CLICK_BLOCK && event.getItem() != null && event.getItem().getType() == Material.FLINT_AND_STEEL) {
+            Player player = event.getPlayer();
+            PlayerStatus pls = main.playerControl.get(player.getUniqueId().toString());
+
+            //must be before register or will count twice at start
+            if (pls.applyPenalty(true)) {
+                main.alert = "Blocked flintAndSteel fire";
+                Utils.logToFile("Protection Manager", player.getName() + " had flint and steel blocked");
+                event.setCancelled(true);
+            }
+
+            //3 flints in less then 60s, sus...
+            if (main.dinamicHackProtection) {
+                pls.registerSusList(PlayerStatus.ActionCodes.flint, 60, 3);
+            }
+
+        }
+
+    }
+
+
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.LOWEST)
+    public void onPlayerGriefAtempt(PlayerBucketEmptyEvent event) {
+
+        Player player = event.getPlayer();
+        PlayerStatus pls = main.playerControl.get(player.getUniqueId().toString());
+
+        if (event.getBucket() == Material.WATER_BUCKET) {
+
+            if (pls.applyPenalty(false)) {
+                event.setCancelled(true);
+            }
+
+        } else if (event.getBucket() == Material.LAVA_BUCKET) {
+
+            //must be before register or will count twice at start
+            if (pls.applyPenalty(true)) {
+                main.alert = "Blocked Lava Bucket";
+                Utils.logToFile("Protection Manager", player.getName() + " had lava bucket blocked");
+                event.setCancelled(true);
+            }
+
+            //3 lava Buckets in less then 60s, sus...
+            if (main.dinamicHackProtection) {
+                pls.registerSusList(PlayerStatus.ActionCodes.lavaBucket, 60, 3);
+            }
+        }
+    }
+
+
+    @EventHandler(ignoreCancelled = true)
+    public void onEntityHit(EntityDamageByEntityEvent event) {
+
+        if (event.getDamager() instanceof Player && (event.getEntity() instanceof Villager)) {
+
+            Player player = (Player) event.getDamager();
+
+            PlayerStatus pls = main.playerControl.get(player.getUniqueId().toString());
+
+            //must be before register or will count twice at start
+            if (pls.applyPenalty(true)) {
+                main.alert = "Blocked Villager damage";
+                Utils.logToFile("Protection Manager", player.getName() + " had Villager damage blocked");
+                event.setCancelled(true);
+            }
+
+            if (main.dinamicHackProtection) {
+                pls.registerSusList(PlayerStatus.ActionCodes.villagers, 90, 3);
+            }
+        }
+    }
+
+
+    @EventHandler(ignoreCancelled = true, priority = EventPriority.HIGHEST)
     public void onBlockDispenseEvent(BlockDispenseEvent e) {
 
         if (!main.tpsProtection) return;
@@ -851,56 +965,6 @@ public class Listeners implements Listener {
 
 
     @EventHandler(ignoreCancelled = true)
-    public void onThrow(PlayerInteractEvent event) {
-
-        PlayerStatus pls = main.playerControl.get(event.getPlayer().getUniqueId().toString());
-
-        if (pls.kick > 2) {
-            event.setCancelled(true);
-            return;
-        }
-
-        if (!main.tpsProtection) return;
-
-        int mytps = tps.lastTPS();
-        if (mytps >= 18) return;
-
-        Action action = event.getAction();
-        Player player = event.getPlayer();
-
-        if (action == Action.RIGHT_CLICK_AIR || action == Action.RIGHT_CLICK_BLOCK) {
-            ItemStack it = player.getInventory().getItemInMainHand();
-            if (it.getType() == Material.SPLASH_POTION) {
-                main.alert = "Blocked thrown splash potion";
-                event.setCancelled(true);
-            }
-        }
-
-    }
-
-
-    @EventHandler(ignoreCancelled = true)
-    public void onFlintAndSteel(PlayerInteractEvent event) {
-
-        Action action = event.getAction();
-        Player player = event.getPlayer();
-
-        PlayerStatus pls = main.playerControl.get(player.getUniqueId().toString());
-
-        if (action == Action.RIGHT_CLICK_BLOCK && event.getItem() != null && event.getItem().getType() == Material.FLINT_AND_STEEL) {
-            if (pls.kick > 0) {
-                main.alert = "Blocked flintAndSteel fire";
-                Utils.logToFile("Protection Manager", player.getName() + " was flint and steel blocked");
-                event.setCancelled(true);
-            } else {
-//               PlayerStatus.Sus sus = new PlayerStatus.Sus();
-//               pls.suspicious.
-            }
-        }
-    }
-
-
-    @EventHandler
     public void onBlockRedstoneEvent(BlockRedstoneEvent event) {
 
         if (!main.tpsProtection) return;
@@ -1054,9 +1118,6 @@ public class Listeners implements Listener {
                         Location newLoc = loc.add(0, 1, 0); //incrementa 1 ao existente em loop
                         block = newLoc.getBlock();
 
-//                        if (block.getX() == 2504 && block.getZ() == -4011)
-//                            System.out.println(i + "     " + block.getType() + "     " + block.getX() + ":" + block.getY() + ":" + block.getZ());
-
                         if (registerBlock(block) && block.getType() == Material.WATER) {
 
                             int level = ((Levelled) block.getBlockData()).getLevel();
@@ -1092,9 +1153,6 @@ public class Listeners implements Listener {
     private boolean registerBlock(Block block) {
         long KeyCoord = Math.abs((10000 * block.getX())) + Math.abs((100 * block.getY())) + Math.abs(block.getZ());
 
-//        if (block.getX() == 2504 && block.getZ() == -4011)
-//            System.out.println(block.getX() + ":" + block.getY() + ":" + block.getZ());
-
         Long testCoord = main.chunkWater.get(KeyCoord);
 
         if (testCoord != null) {
@@ -1105,6 +1163,23 @@ public class Listeners implements Listener {
             return true;
         }
     }
+
+
+    ////test code
+//    @EventHandler(ignoreCancelled = true)
+//    public void onPlayerDropItemEvent(PlayerDropItemEvent event) {  //limit tested 150+ with tps18
+//        event.getPlayer().sendMessage("dropping stuff");
+//
+//        Vector vel = new Vector(0, 1, 0);
+//
+//        event.getPlayer().setVelocity(vel);
+//
+//        main.myBukkit.runTaskLater(event.getPlayer(), null, null, () -> {
+//            Vector vel1 = new Vector(0, 0, 0);
+//            event.getPlayer().setVelocity(vel1);
+//        }, 30);
+//
+//    }
 
 
 }

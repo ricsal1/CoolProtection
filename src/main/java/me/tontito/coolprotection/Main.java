@@ -34,6 +34,7 @@ public class Main extends JavaPlugin {
     protected boolean WitherProtection;
     protected int WitherLevel;
     protected int ExplosionLevel;
+    protected boolean dinamicHackProtection;
     protected boolean speedProtection;
     protected boolean hackProtection;
     protected boolean antiChatReport;
@@ -51,6 +52,7 @@ public class Main extends JavaPlugin {
     public void onEnable() {
         myBukkit = new MyBukkit(this);
 
+        String versionnumber = Bukkit.getVersion().toUpperCase();
         String version = Bukkit.getServer().getName().toUpperCase();
 
         if (version.contains("PAPER")) {
@@ -95,16 +97,19 @@ public class Main extends JavaPlugin {
             getServer().getPluginManager().registerEvents(listen, this);
         }
 
+        if (Utils.checkGreater("1.21.1", Bukkit.getServer().getBukkitVersion()) == -1) {
+            getLogger().severe(" You are using a Minecraft Server version with possible data loss and known exploits, get informed and evaluate updating to 1.21.1");
+        }
+
         if (tpsProtection) {
-            getLogger().info(ChatColor.GREEN + " Enabled and balanced for " + version);
+            getLogger().info(ChatColor.GREEN + " Enabled and balanced for " + version + " v" + versionnumber + "    :::" + Bukkit.getServer().getMinecraftVersion() + "    :::" + Bukkit.getServer().getBukkitVersion());
         } else {
             getLogger().info(ChatColor.GREEN + " Enabled without TPS control, for " + version);
         }
 
         try {
-            myBukkit.runTaskLater(null, null, null,  () -> new Metrics(this, 22317),5);
-        }
-        catch (Exception e){
+            myBukkit.runTaskLater(null, null, null, () -> new Metrics(this, 22317), 5);
+        } catch (Exception e) {
             getLogger().info(ChatColor.RED + " Failed to register into Bstats");
         }
     }
@@ -158,6 +163,10 @@ public class Main extends JavaPlugin {
             config.addDefault("tpsProtection", true);
         }
 
+        if (!config.contains("dinamicProtection")) {
+            config.addDefault("dinamicHackProtection", true);
+        }
+
         config.options().copyDefaults(true);
         saveConfig();
 
@@ -168,59 +177,29 @@ public class Main extends JavaPlugin {
     public void LoadSettings() {
         FileConfiguration config = getConfig();
 
-        try {
-            ExplodeProtection = config.getBoolean("ExplodeProtection");
-            WitherProtection = config.getBoolean("WitherProtection");
-            WitherLevel = config.getInt("WitherLevel");
+        ExplodeProtection = config.getBoolean("ExplodeProtection", false);
+        WitherProtection = config.getBoolean("WitherProtection", false);
+        WitherLevel = config.getInt("WitherLevel", 0);
 
-            autoShutdown = config.getBoolean("autoShutdown");
-            autoShutDownCounterTime = config.getInt("autoShutDownCounterTime");
-            autoShutDownTime = config.getInt("autoShutdownTime");
+        autoShutdown = config.getBoolean("autoShutdown", false);
+        autoShutDownCounterTime = config.getInt("autoShutDownCounterTime", 10);
+        autoShutDownTime = config.getInt("autoShutdownTime", 0);
 
-            maxSpeed = (float) config.getDouble("maxTravelSpeed");
-            totalMaxChunkEntities = config.getInt("maxChunkEntities");
-            ExplosionLevel = config.getInt("ExplosionLevel");
+        maxSpeed = (float) config.getDouble("maxTravelSpeed", 1.2f);
+        totalMaxChunkEntities = config.getInt("maxChunkEntities", 70);
+        ExplosionLevel = config.getInt("ExplosionLevel", 0);
 
-        } catch (Exception e) {
-            getLogger().info("## Error loading configs, disabling protections!");
-            ExplodeProtection = false;
-            WitherProtection = false;
-            autoShutdown = false;
-            autoShutDownCounterTime = 10;
-            autoShutDownTime = 0;
-            totalMaxChunkEntities = 70;
-            maxSpeed = (float) 1.2;
-        }
+        speedProtection = getConfig().getBoolean("speedProtection", false);
+        hackProtection = getConfig().getBoolean("hackProtection", false);
 
-        try {
-            speedProtection = getConfig().getBoolean("speedProtection");
-            hackProtection = getConfig().getBoolean("hackProtection");
-        } catch (Exception e) {
-            speedProtection = false;
-            hackProtection = false;
-        }
+        maxRedstone = getConfig().getInt("maxRedstoneComponents", 150);
+        maxRedstoneChunk = getConfig().getInt("maxRedstoneChunkComponents", 40);
 
-        try {
-            maxRedstone = getConfig().getInt("maxRedstoneComponents");
-            maxRedstoneChunk = getConfig().getInt("maxRedstoneChunkComponents");
-        } catch (Exception e) {
-            maxRedstone = 150;
-            maxRedstoneChunk = 40;
-        }
 
-        try {
-            DEFAULT_RESOURCE = config.getString("DEFAULT_RESOURCE", "");
-            DEFAULT_RESOURCE_HASH = config.getString("DEFAULT_RESOURCE_HASH", "");
-        } catch (Exception e) {
-            DEFAULT_RESOURCE = "";
-            DEFAULT_RESOURCE_HASH = "";
-        }
+        DEFAULT_RESOURCE = config.getString("DEFAULT_RESOURCE", "");
+        DEFAULT_RESOURCE_HASH = config.getString("DEFAULT_RESOURCE_HASH", "");
 
-        try {
-            antiChatReport = getConfig().getBoolean("antiChatReport");
-        } catch (Exception e) {
-            antiChatReport = false;
-        }
+        antiChatReport = getConfig().getBoolean("antiChatReport", false);
 
         if (totalMaxChunkEntities != getServer().getWorld("world").getSpawnLimit(MONSTER)) {
             int tmpChuck = totalMaxChunkEntities;
@@ -239,11 +218,8 @@ public class Main extends JavaPlugin {
             }
         }
 
-        try {
-            tpsProtection = getConfig().getBoolean("tpsProtection");
-        } catch (Exception e) {
-            tpsProtection = false;
-        }
+        tpsProtection = getConfig().getBoolean("tpsProtection", false);
+        dinamicHackProtection = getConfig().getBoolean("dinamicHackProtection", false);
     }
 
 
