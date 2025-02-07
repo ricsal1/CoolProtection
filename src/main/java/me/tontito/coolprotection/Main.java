@@ -1,8 +1,6 @@
 package me.tontito.coolprotection;
 
 import me.tontito.coolprotection.Updater.Metrics;
-import me.tontito.coolprotection.Updater.UpdateChecker;
-import me.tontito.coolprotection.Updater.UpdateCheckerBukkSpig;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.GameRule;
@@ -78,12 +76,6 @@ public class Main extends JavaPlugin {
             return;
         }
 
-        if (serverVersion == 2 || serverVersion == 3) {
-            new UpdateCheckerBukkSpig(this);
-        } else {
-            new UpdateChecker(this);
-        }
-
         Utils.SetMain(this);
         setupConfig();
 
@@ -102,7 +94,7 @@ public class Main extends JavaPlugin {
         }
 
         if (tpsProtection) {
-            getLogger().info(ChatColor.GREEN + " Enabled and balanced for " + version + " v" + versionnumber + "    :::" + Bukkit.getServer().getMinecraftVersion() + "    :::" + Bukkit.getServer().getBukkitVersion());
+            getLogger().info(ChatColor.GREEN + " Enabled and balanced for " + version + " v" + versionnumber + "     :::" + Bukkit.getServer().getBukkitVersion());
         } else {
             getLogger().info(ChatColor.GREEN + " Enabled without TPS control, for " + version);
         }
@@ -112,6 +104,8 @@ public class Main extends JavaPlugin {
         } catch (Exception e) {
             getLogger().info(ChatColor.RED + " Failed to register into Bstats");
         }
+
+        myBukkit.UpdateChecker(getDescription().getName(),true);
     }
 
 

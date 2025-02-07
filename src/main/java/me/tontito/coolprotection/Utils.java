@@ -1,6 +1,5 @@
 package me.tontito.coolprotection;
 
-import org.bukkit.entity.Player;
 
 import java.io.File;
 import java.io.FileWriter;

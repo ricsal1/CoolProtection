@@ -2,6 +2,7 @@ package me.tontito.coolprotection;
 
 import com.destroystokyo.paper.event.entity.PreCreatureSpawnEvent;
 import com.destroystokyo.paper.event.server.ServerTickEndEvent;
+import dev.danablend.counterstrike.CounterStrike;
 import fr.mrmicky.fastboard.FastBoard;
 import org.bukkit.*;
 import org.bukkit.entity.Entity;
@@ -42,7 +43,7 @@ public class TpsCheck implements Listener {
     int[] regions = new int[61]; //region total by second
     long[][] ticks = new long[3][10]; //tick and region counter
     private long lastPoll = 0;
-
+    private CounterStrike myCsmc;
 
     public TpsCheck(@NotNull Main main) {
         this.main = main;
@@ -61,6 +62,11 @@ public class TpsCheck implements Listener {
         if (main.autoShutdown) {
             main.getLogger().info(" Auto Shutdown server is on! ");
         }
+
+        myCsmc = ((dev.danablend.counterstrike.CounterStrike) main.getServer().getPluginManager().getPlugin("CSMC"));
+
+        main.getLogger().info("Checking for CSMC system availability: " + (myCsmc != null));
+
     }
 
 
@@ -468,6 +474,12 @@ public class TpsCheck implements Listener {
         if (main.playerControl == null || main.playerControl.isEmpty()) return;
 
         for (Player player : Bukkit.getOnlinePlayers()) {
+
+            if (myCsmc != null && myCsmc.getCSPlayer(player,false,null) != null) {
+                Utils.logToFile("Protection Manager", player.getName() + " is playing cs");
+                continue;
+            }
+
             PlayerStatus p = main.playerControl.get(player.getUniqueId().toString());
 
             if (p != null) {
