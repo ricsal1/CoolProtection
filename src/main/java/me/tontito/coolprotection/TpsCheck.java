@@ -11,6 +11,7 @@ import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
+import org.bukkit.plugin.Plugin;
 import org.jetbrains.annotations.NotNull;
 
 import java.time.LocalDateTime;
@@ -63,7 +64,11 @@ public class TpsCheck implements Listener {
             main.getLogger().info(" Auto Shutdown server is on! ");
         }
 
-        myCsmc = ((dev.danablend.counterstrike.CounterStrike) main.getServer().getPluginManager().getPlugin("CSMC"));
+        try {
+            Plugin test = main.getServer().getPluginManager().getPlugin("CSMC");
+            if (test != null) myCsmc = ((dev.danablend.counterstrike.CounterStrike) test);
+        } catch (NoClassDefFoundError e) {
+        }
 
         main.getLogger().info("Checking for CSMC system availability: " + (myCsmc != null));
 
@@ -475,7 +480,7 @@ public class TpsCheck implements Listener {
 
         for (Player player : Bukkit.getOnlinePlayers()) {
 
-            if (myCsmc != null && myCsmc.getCSPlayer(player,false,null) != null) {
+            if (myCsmc != null && myCsmc.getCSPlayer(player, false, null) != null) {
                 Utils.logToFile("Protection Manager", player.getName() + " is playing cs");
                 continue;
             }

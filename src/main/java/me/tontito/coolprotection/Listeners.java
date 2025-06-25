@@ -1133,6 +1133,8 @@ public class Listeners implements Listener {
                                     main.chunkWater.replace(time, (testtime + (System.nanoTime() - mytime)));
                                 }
 
+                                Utils.logToFile("Protection Manager BlockPhysicsEvent", "Block replaced @"+ newLoc);
+
                                 return; //game over mf
                             }
                             if (level == 8) {

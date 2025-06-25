@@ -89,8 +89,8 @@ public class Main extends JavaPlugin {
             getServer().getPluginManager().registerEvents(listen, this);
         }
 
-        if (Utils.checkGreater("1.21.1", Bukkit.getServer().getBukkitVersion()) == -1) {
-            getLogger().severe(" You are using a Minecraft Server version with possible data loss and known exploits, get informed and evaluate updating to 1.21.1");
+        if (myBukkit.checkGreater("1.21.1", Bukkit.getServer().getBukkitVersion()) == -1) {
+            getLogger().severe(" You are using a Minecraft Server version with possible problems of data loss and known exploits, get informed and evaluate updating to at least 1.21.1");
         }
 
         if (tpsProtection) {
@@ -105,7 +105,7 @@ public class Main extends JavaPlugin {
             getLogger().info(ChatColor.RED + " Failed to register into Bstats");
         }
 
-        myBukkit.UpdateChecker(getDescription().getName(),true);
+        myBukkit.UpdateChecker(true);
     }
 
 
