@@ -716,7 +716,7 @@ public class Listeners implements Listener {
             Block block2 = player.getLocation().getBlock();
             PlayerStatus p = main.playerControl.get(player.getUniqueId().toString());
 
-            if (!player.isSneaking() && !player.isFlying() && !player.isGliding() && !(player.getVehicle() instanceof Horse) && block.getType().equals(Material.AIR) && !player.hasPotionEffect(PotionEffectType.LEVITATION)) { //jumping
+            if (!player.isSneaking() && !player.isFlying() && !player.isGliding() && !(player.getVehicle() instanceof Horse)  && !(player.getVehicle() instanceof HappyGhast) && block.getType().equals(Material.AIR) && !player.hasPotionEffect(PotionEffectType.LEVITATION)) { //jumping
 
                 ItemStack it = player.getInventory().getItemInMainHand();
 
@@ -770,7 +770,7 @@ public class Listeners implements Listener {
                         }
                     }
 
-                    Utils.logToFile("Protection Manager debug", player.getName() + "   " + it + "     " + it2 + "    " + it.containsEnchantment(Enchantment.RIPTIDE) + "    " + it2.containsEnchantment(Enchantment.RIPTIDE));
+                    Utils.logToFile("Protection Manager debug", player.getName() + "   " + it + "     " + it2 + "    " + it.containsEnchantment(Enchantment.RIPTIDE) + "    " + it2.containsEnchantment(Enchantment.RIPTIDE)  + "     " + player.getVehicle());
                     Utils.logToFile("Protection Manager debug", player.getName() + "   " + heightDiff + "    counter " + p.counter + "    " + (p.hight - currentHeight) + "    " + block2 + "   " + player.hasPotionEffect(PotionEffectType.LEVITATION));
 
                     double currentVecX = player.getVelocity().getX();
