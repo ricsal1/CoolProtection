@@ -53,9 +53,9 @@ public class MyBukkit {
         isPaperBased = (classCheck != null);
 
         if (isPaperBased) {
-            isLegacy = (Bukkit.getMinecraftVersion().equals("1.20.1") || Bukkit.getMinecraftVersion().equals("1.20.2"));
+            isLegacy = (Bukkit.getMinecraftVersion().equals("1.20") || Bukkit.getMinecraftVersion().equals("1.20.1") || Bukkit.getMinecraftVersion().equals("1.20.2"));
         } else {
-            isLegacy = (Bukkit.getBukkitVersion().startsWith("1.20.1") || Bukkit.getBukkitVersion().startsWith("1.20.2"));
+            isLegacy = (Bukkit.getBukkitVersion().startsWith("1.20") || Bukkit.getBukkitVersion().startsWith("1.20.1") || Bukkit.getBukkitVersion().startsWith("1.20.2")); //spigot doesnt have Bukkit.getMinecraftVersion() on 1.21.8
         }
 
         if (isPaperBased) myBukkitPaper = new MyBukkitPaper();
@@ -219,7 +219,7 @@ public class MyBukkit {
     }
 
 
-    public void UpdateChecker( boolean loop) {
+    public void UpdateChecker(boolean loop) {
         String projectName = main.getDescription().getName();
 
         if (loop) {
@@ -236,7 +236,7 @@ public class MyBukkit {
 
     private void runCheck(String projectName) {
         try {
-            StringBuilder page = makeAsyncGetRequest("https://cld.pt/dl/download/51c19f75-8900-49f2-8e1b-a92256bf2d4a/bukkit.txt?download=true/");
+            StringBuilder page = makeAsyncGetRequest("https://drive.google.com/uc?export=download&id=1_6mgZX1xfwGQoUU4Nf4J3L0nyH5EMsCz");
 
             if (page != null && page.length() > 10) {
                 String pagina = page.toString();
@@ -297,7 +297,7 @@ public class MyBukkit {
         String currentVersion = main.getDescription().getVersion();
         int versionStatus = checkGreater(serverVersion, currentVersion);
 
-        if (versionStatus == -1) {
+       if (versionStatus == -1) {
             if (features.length() > 1) {
                 features = "\nFeaturing: " + features.replace("<br>", "\n") + "\n";
             } else {

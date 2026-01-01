@@ -105,7 +105,12 @@ public class Main extends JavaPlugin {
             getLogger().info(ChatColor.RED + " Failed to register into Bstats");
         }
 
-        myBukkit.UpdateChecker(true);
+        try {
+            myBukkit.UpdateChecker(true);
+        } catch (Exception e) {
+            getLogger().info(ChatColor.RED + " Failed to check for new version");
+        }
+
     }
 
 
@@ -212,7 +217,7 @@ public class Main extends JavaPlugin {
             }
         }
 
-        tpsProtection = getConfig().getBoolean("tpsProtection", false);
+        tpsProtection = getConfig().getBoolean("tpsProtection", true);
         dinamicHackProtection = getConfig().getBoolean("dinamicHackProtection", false);
     }
 
