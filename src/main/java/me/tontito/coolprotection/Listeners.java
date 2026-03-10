@@ -298,7 +298,7 @@ public class Listeners implements Listener {
 
         Location location = event.getLocation();
 
-        if (main.serverVersion == 8 && !main.myBukkit.isOwnedby(null, location, null)) return;
+        if (main.myBukkit.isFolia() && !main.myBukkit.isOwnedby(null, location, null)) return;
 
         if (main.tpsProtection) {
             int mytps = tps.lastTPS();
@@ -359,7 +359,7 @@ public class Listeners implements Listener {
 
         Location location = event.getLightning().getLocation();
 
-        if (main.serverVersion == 8 && !main.myBukkit.isOwnedby(null, location, null)) return;
+        if (main.myBukkit.isFolia() && !main.myBukkit.isOwnedby(null, location, null)) return;
 
         int mytps = tps.lastTPS();
 
@@ -396,7 +396,7 @@ public class Listeners implements Listener {
         EntityType entidade = event.getEntityType();
         Location location = event.getLocation();
 
-        if (main.serverVersion == 8 && !main.myBukkit.isOwnedby(null, location, null)) return;
+        if (main.myBukkit.isFolia() && !main.myBukkit.isOwnedby(null, location, null)) return;
 
         World world = location.getWorld();
         World.Environment mundo = world.getEnvironment();
@@ -427,7 +427,7 @@ public class Listeners implements Listener {
 
             int nearbyEntities = 0;
 
-            if (main.serverVersion == 2 || main.serverVersion == 3) {
+            if (!main.myBukkit.isPaper()) {
                 for (Object entity : world.getNearbyEntities(location, 30, 200, 30)) {
                     if (entity instanceof LivingEntity) {
                         nearbyEntities++;
@@ -545,7 +545,7 @@ public class Listeners implements Listener {
 
         Location location = event.getLocation();
 
-        if (main.serverVersion == 8 && !main.myBukkit.isOwnedby(null, location, null)) return;
+        if (main.myBukkit.isFolia() && !main.myBukkit.isOwnedby(null, location, null)) return;
 
         World world = location.getWorld();
 
@@ -574,7 +574,7 @@ public class Listeners implements Listener {
 
         Entity entidade = event.getEntity();
 
-        if (main.serverVersion == 8 && !main.myBukkit.isOwnedby(entidade, null, null)) return;
+        if (main.myBukkit.isFolia() && !main.myBukkit.isOwnedby(entidade, null, null)) return;
 
         if (entidade.getType().isAlive()) {
             return;
@@ -642,7 +642,7 @@ public class Listeners implements Listener {
 
         Location location = event.getEntity().getLocation();
 
-        if (main.serverVersion == 8 && !main.myBukkit.isOwnedby(null, location, null)) return;
+        if (main.myBukkit.isFolia() && !main.myBukkit.isOwnedby(null, location, null)) return;
 
         int mytps = tps.lastTPS();
         int counter = 0;
@@ -1022,9 +1022,10 @@ public class Listeners implements Listener {
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
     public void onBlockPhysicsv2(BlockPhysicsEvent event) {
 
-        if (!main.tpsProtection) return;
+        //must have both to trigger
+        if (!main.tpsProtection || !main.checkWaterLagMachine) return;
 
-        if (main.serverVersion == 2 || main.serverVersion == 3) return;
+        if (!main.myBukkit.isPaper()) return;
 
         int mytps = tps.lastTPS();
         if (mytps >= 13) return; //less them 13 tps will trigger this analysis

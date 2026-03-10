@@ -15,7 +15,6 @@ import static org.bukkit.entity.SpawnCategory.MONSTER;
 public class Main extends JavaPlugin {
 
     public TpsCheck tps;
-    public int serverVersion = 0;
     public Hashtable<String, PlayerStatus> playerControl = new Hashtable();
     public Hashtable<Long, Long> chunkWater = new Hashtable();
     public MyBukkit myBukkit;
@@ -46,6 +45,7 @@ public class Main extends JavaPlugin {
     protected int autoShutDownCounterTime = 15;
     protected boolean AntigriefProtection = false;
     protected boolean Emergency = false;
+    protected boolean checkWaterLagMachine=false;
 
     public void onEnable() {
         myBukkit = new MyBukkit(this);
@@ -53,36 +53,13 @@ public class Main extends JavaPlugin {
         String versionnumber = Bukkit.getVersion().toUpperCase();
         String version = Bukkit.getServer().getName().toUpperCase();
 
-        if (version.contains("PAPER")) {
-            serverVersion = 1;
-        } else if (version.contains("BUKKIT")) {
-            serverVersion = 2;
-        } else if (version.contains("SPIGOT")) {
-            serverVersion = 3;
-        } else if (version.contains("PURPUR")) {
-            serverVersion = 4;
-        } else if (version.contains("PUFFERFISH")) {
-            serverVersion = 5;
-        } else if (version.contains("-PETAL-")) {
-            serverVersion = 6;
-        } else if (version.contains("-SAKURA-")) {
-            serverVersion = 7;
-        } else if (myBukkit.isFolia()) {
-            serverVersion = 8;
-
-        } else {
-            getLogger().info(ChatColor.RED + "Server type not supported or tested! " + version);
-            getServer().getPluginManager().disablePlugin(this);
-            return;
-        }
-
         Utils.SetMain(this);
         setupConfig();
 
         tps = new TpsCheck(this);
         listen = new Listeners(this, tps);
 
-        if (serverVersion == 1 || serverVersion == 4 || serverVersion == 5 || serverVersion == 6 || serverVersion == 7 || serverVersion == 8) {
+        if (myBukkit.isPaper() || myBukkit.isFolia()) {
             getServer().getPluginManager().registerEvents(listen, this);
             getServer().getPluginManager().registerEvents(tps, this);
         } else {
@@ -166,6 +143,8 @@ public class Main extends JavaPlugin {
             config.addDefault("dinamicHackProtection", true);
         }
 
+        config.addDefault("checkWaterLagMachine", false);
+
         config.options().copyDefaults(true);
         saveConfig();
 
@@ -208,7 +187,7 @@ public class Main extends JavaPlugin {
 
             getLogger().info("SpawnLimit value changed from " + getServer().getWorld("world").getSpawnLimit(MONSTER) + " to " + tmpChuck);
 
-            if (serverVersion != 8) {
+            if (!myBukkit.isFolia()) {
                 getServer().getWorld("world").setSpawnLimit(MONSTER, tmpChuck);
                 getServer().getWorld("world").setGameRule(GameRule.MAX_ENTITY_CRAMMING, 24); //to fix previous mistake
             } else {
@@ -219,6 +198,8 @@ public class Main extends JavaPlugin {
 
         tpsProtection = getConfig().getBoolean("tpsProtection", true);
         dinamicHackProtection = getConfig().getBoolean("dinamicHackProtection", false);
+
+        checkWaterLagMachine= getConfig().getBoolean("checkWaterLagMachine", false);
     }
 
 

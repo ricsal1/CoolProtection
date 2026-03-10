@@ -50,13 +50,22 @@ public class TpsCheck implements Listener {
         this.main = main;
 
         //for spigot and bukkit
-        if (main.serverVersion == 2 || main.serverVersion == 3) {
+        if (!main.myBukkit.isPaper()) {
             main.getServer().getScheduler().scheduleSyncRepeatingTask(
                     main, () -> {
                         lastPoll++;
                         updateTps(0, lastPoll);
                     }, 0,// waits 0 ticks
                     1 // 1 tick de interval (tick interno, 20 by second, if at least one is missing then we have problems)
+            );
+        }
+
+        if (main.myBukkit.isFolia()) {
+            main.myBukkit.runTaskTimer(null, null, null, () -> {
+                        checkTurnOff(LocalDateTime.now());
+
+                    }, 200,// waits 200 ticks
+                    40 // 40 tick de interval (tick interno, 20 by second, if at least one is missing then we have problems)
             );
         }
 
@@ -530,7 +539,7 @@ public class TpsCheck implements Listener {
         int nearbyLivingEntities = 0;
         int nearbyEntities = 0;
 
-        if (main.serverVersion == 2 || main.serverVersion == 3) {
+        if (!main.myBukkit.isPaper()) {
             for (Object entity : player.getWorld().getNearbyEntities(player.getLocation(), 30, 200, 30)) {
                 if (entity instanceof LivingEntity) {
                     nearbyLivingEntities++;
@@ -544,7 +553,7 @@ public class TpsCheck implements Listener {
 
         int playerCount;
 
-        if (main.serverVersion == 2 || main.serverVersion == 3) {
+        if (!main.myBukkit.isPaper()) {
             playerCount = Bukkit.getOnlinePlayers().size();
         } else {
             playerCount = player.getWorld().getPlayerCount();
